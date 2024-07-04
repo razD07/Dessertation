@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from "vue-router";
 import LoginComponent from "@/components/login.vue";
 import RegisterComponent from "@/components/Register.vue";
 import WelcomeGPComponent from "@/components/welcomeGP.vue";
-import WelcomePublicComponent from "@/components/welcomeGP.vue";
+import WelcomePublicComponent from "@/components/welcomePublic.vue";
 import { getUserNameFromToken } from "@/utils/auth";
 
 const routes = [
