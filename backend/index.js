@@ -35,6 +35,12 @@ app.listen(5038, () => {
   console.log("Server is running on port 5038");
 });
 
+// Central error handling middleware
+app.use((req, res, next) => {
+  res.setHeader("Cache-Control", "no-store");
+  next();
+});
+
 // Route for checking database connection status
 app.get("/", (req, res) => {
   if (database) {
@@ -98,7 +104,7 @@ app.get("/checkUserExists", async (req, res) => {
     const existingUser =
       (await database.collection("gpCollection").findOne({ email })) ||
       (await database.collection("publicUsersCollection").findOne({ email }));
-    debugger;
+
     if (existingUser) {
       return res.status(200).send({ exists: true });
     }
@@ -139,7 +145,14 @@ app.post("/register/gp", multer().none(), async (req, res) => {
     const result = await database.collection("gpCollection").insertOne(gpData);
 
     if (result.insertedId) {
-      res.status(201).send({ id: result.insertedId, ...gpData });
+      const token = jwt.sign(
+        { id: result.insertedId, email, userType: "GP", name },
+        JWT_SECRET,
+        {
+          expiresIn: "1h",
+        }
+      );
+      res.status(201).send({ message: "GP registered successfully", token });
     } else {
       throw new Error("Failed to insert GP data");
     }
@@ -150,7 +163,7 @@ app.post("/register/gp", multer().none(), async (req, res) => {
 });
 
 app.post("/register/public", multer().none(), async (req, res) => {
-  const { name, email, phoneNumber, address, password } = req.body;
+  const { name, email, phoneNumber, address, dob, password } = req.body;
   if (!password || password.length < 6) {
     return res
       .status(400)
@@ -169,6 +182,7 @@ app.post("/register/public", multer().none(), async (req, res) => {
       email,
       phoneNumber,
       address,
+      dob,
       password: hashedPassword,
     };
     const result = await database
@@ -176,7 +190,16 @@ app.post("/register/public", multer().none(), async (req, res) => {
       .insertOne(publicData);
 
     if (result.insertedId) {
-      res.status(201).send({ id: result.insertedId, ...publicData });
+      const token = jwt.sign(
+        { id: result.insertedId, email, userType: "Public", name },
+        JWT_SECRET,
+        {
+          expiresIn: "1h",
+        }
+      );
+      res
+        .status(201)
+        .send({ message: "Public user registered successfully", token });
     } else {
       throw new Error("Failed to insert public user data");
     }

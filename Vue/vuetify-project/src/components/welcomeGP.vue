@@ -18,7 +18,7 @@
 </template>
 
 <script>
-import { getUserNameFromToken } from "../utils/auth";
+import { getUserNameFromToken } from "@/utils/auth";
 
 export default {
   name: "WelcomeGP",
