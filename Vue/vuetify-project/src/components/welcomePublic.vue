@@ -18,7 +18,7 @@
 </template>
 
 <script>
-import { getUserNameFromToken } from "../utils/auth";
+import { getUserNameFromToken } from "@/utils/auth";
 
 export default {
   name: "WelcomePublic",
@@ -29,7 +29,6 @@ export default {
   },
   created() {
     const token = localStorage.getItem("token");
-    debugger;
     this.userName = getUserNameFromToken(token);
   },
   methods: {
