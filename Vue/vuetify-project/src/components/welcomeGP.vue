@@ -1,16 +1,15 @@
 <template>
-  <div class="welcome-container">
-    <v-container>
-      <v-card
-        class="elevation-12"
-        style="max-width: 550px; border-radius: 20px"
-      >
-        <v-card-title class="text-center">
-          <h1>Welcome {{ userName }}!</h1>
+  <div>
+    <navbar />
+    <v-container class="fill-height d-flex align-center justify-center">
+      <v-card class="elevation-12" style="max-width: 600px; width: 100%">
+        <v-card-title class="text-left">
+          <!-- Moved text to the left -->
+          <h1>Welcome to GP Dashboard</h1>
         </v-card-title>
         <v-card-text>
-          <p>You have successfully logged in as a General Practitioner.</p>
-          <v-btn color="primary" @click="logout">Logout</v-btn>
+          <p>Here you can manage your clinic's information and appointments.</p>
+          <!-- Add more GP-specific content here -->
         </v-card-text>
       </v-card>
     </v-container>
@@ -18,33 +17,33 @@
 </template>
 
 <script>
+import Navbar from "@/components/navbar.vue"; // Adjust the path as needed
 import { getUserNameFromToken } from "@/utils/auth";
 
 export default {
   name: "WelcomeGP",
+  components: {
+    Navbar,
+  },
   data() {
     return {
-      userName: null,
+      userName: "Loading...", // Initialize with a default value
     };
   },
   created() {
     const token = localStorage.getItem("token");
-    this.userName = getUserNameFromToken(token);
-  },
-  methods: {
-    logout() {
-      localStorage.removeItem("token");
-      this.$router.push({ name: "Login" });
-    },
+    this.userName = getUserNameFromToken(token) || "Guest"; // Fallback to 'Guest' if no name found
   },
 };
 </script>
 
 <style scoped>
-.welcome-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
+.v-container {
   height: 100vh;
+  background-color: #fff; /* Plain white background */
+}
+.v-card {
+  background-color: rgba(255, 255, 255, 0.9);
+  border-radius: 20px;
 }
 </style>

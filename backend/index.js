@@ -1,5 +1,5 @@
 const express = require("express");
-const { MongoClient } = require("mongodb");
+const { MongoClient, ObjectId } = require("mongodb");
 const cors = require("cors");
 const multer = require("multer");
 const bcrypt = require("bcrypt");
@@ -184,6 +184,7 @@ app.post("/register/public", multer().none(), async (req, res) => {
       address,
       dob,
       password: hashedPassword,
+      registeredGP: null, // Initialize with no registered GP
     };
     const result = await database
       .collection("publicUsersCollection")
@@ -243,9 +244,53 @@ app.post("/login", multer().none(), async (req, res) => {
       }
     );
 
-    res.send({ message: "Login successful", token, userType });
+    res.send({
+      message: "Login successful",
+      token,
+      userType,
+      userId: user._id,
+    });
   } catch (error) {
     console.error("Error logging in:", error);
     res.status(500).send({ error: "Login failed" });
+  }
+});
+
+// Route to fetch the list of GPs
+app.get("/api/gps", async (req, res) => {
+  try {
+    const gps = await database.collection("gpCollection").find({}).toArray();
+    res.send(gps);
+  } catch (error) {
+    console.error("Error fetching GPs:", error);
+    res.status(500).send({ error: "An error occurred while fetching GPs." });
+  }
+});
+
+// Route to register a public user with a selected GP
+app.post("/api/registerWithGP", async (req, res) => {
+  const { publicUserId, gpId } = req.body;
+
+  if (!publicUserId || !gpId) {
+    return res
+      .status(400)
+      .send({ error: "Public user ID and GP ID are required" });
+  }
+
+  try {
+    const publicUserCollection = database.collection("publicUsersCollection");
+
+    // Update the registered GP for the public user
+    await publicUserCollection.updateOne(
+      { _id: new ObjectId(publicUserId) },
+      { $set: { registeredGP: gpId } }
+    );
+
+    res.send({ message: "Successfully registered with GP" });
+  } catch (error) {
+    console.error("Error registering with GP:", error);
+    res
+      .status(500)
+      .send({ error: "An error occurred while registering with GP" });
   }
 });
