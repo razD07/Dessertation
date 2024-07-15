@@ -4,6 +4,7 @@ import RegisterComponent from "@/components/Register.vue";
 import WelcomeGPComponent from "@/components/welcomeGP.vue";
 import WelcomePublicComponent from "@/components/welcomePublic.vue";
 import { getUserNameFromToken } from "@/utils/auth";
+import RegisteredPublicUsers from "@/components/RegisteredPublicUsers.vue"; // New import
 
 const routes = [
   {
@@ -25,6 +26,11 @@ const routes = [
     path: "/welcome-public",
     name: "WelcomePublic",
     component: WelcomePublicComponent,
+  },
+  {
+    path: "/registered-public-users",
+    name: "RegisteredPublicUsers",
+    component: RegisteredPublicUsers, // New route
   },
 ];
 
