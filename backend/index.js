@@ -294,3 +294,22 @@ app.post("/api/registerWithGP", async (req, res) => {
       .send({ error: "An error occurred while registering with GP" });
   }
 });
+
+// Route to fetch the list of public users registered to a specific GP
+app.get("/api/publicUsers/:gpId", async (req, res) => {
+  const { gpId } = req.params;
+  console.log("gp", gpId);
+  try {
+    const publicUsers = await database
+      .collection("publicUsersCollection")
+      .find({ registeredGP: gpId })
+      .toArray();
+
+    res.send(publicUsers);
+  } catch (error) {
+    console.error("Error fetching public users:", error);
+    res
+      .status(500)
+      .send({ error: "An error occurred while fetching public users." });
+  }
+});
