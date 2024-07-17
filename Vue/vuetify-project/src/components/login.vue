@@ -122,10 +122,9 @@ export default {
         localStorage.setItem("userId", userId); // Store the user ID
         localStorage.setItem("userType", userType); // Store the user type
         alert("Login successful!");
-
         if (userType === "GP") {
           this.$router.push({ name: "WelcomeGP" });
-        } else {
+        } else if (userType === "Public") {
           this.$router.push({ name: "WelcomePublic" });
         }
       } catch (error) {

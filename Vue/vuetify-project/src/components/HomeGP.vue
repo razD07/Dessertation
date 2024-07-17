@@ -1,7 +1,15 @@
 <template>
   <div>
+    <navbar />
     <v-container class="fill-height d-flex align-center justify-center">
-      <router-view></router-view>
+      <v-card class="elevation-12" style="max-width: 800px; width: 100%">
+        <v-card-title class="text-left">
+          <h1>Welcome to Home GP Dashboard, {{ userName }}</h1>
+        </v-card-title>
+        <v-card-text>
+          <!-- <p>Here you can manage your clinic's information and appointments.</p> -->
+        </v-card-text>
+      </v-card>
     </v-container>
   </div>
 </template>
@@ -11,7 +19,7 @@ import Navbar from "@/components/navbar.vue";
 import { getUserNameFromToken } from "@/utils/auth";
 
 export default {
-  name: "WelcomeGP",
+  name: "HomeGP",
   components: {
     Navbar,
   },

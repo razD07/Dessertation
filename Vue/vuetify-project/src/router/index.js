@@ -5,6 +5,13 @@ import WelcomeGPComponent from "@/components/welcomeGP.vue";
 import WelcomePublicComponent from "@/components/welcomePublic.vue";
 import { getUserNameFromToken } from "@/utils/auth";
 import RegisteredPublicUsers from "@/components/RegisteredPublicUsers.vue"; // New import
+import HomeGP from "@/components/HomeGP.vue";
+import HomePublic from "@/components/HomePublic.vue";
+import Appointments from "@/components/Appointments.vue";
+import GPs from "@/components/GPs.vue";
+import History from "@/components/History.vue";
+import Uploads from "@/components/Uploads.vue";
+import Settings from "@/components/Settings.vue";
 
 const routes = [
   {
@@ -19,18 +26,35 @@ const routes = [
   },
   {
     path: "/welcome-gp",
+    redirect: { path: "/welcome-gp/home" },
     name: "WelcomeGP",
     component: WelcomeGPComponent,
+    children: [
+      { path: "home", name: "HomeGP", component: HomeGP },
+      { path: "appointments", name: "Appointments", component: Appointments },
+      {
+        path: "registered",
+        name: "Registered",
+        component: RegisteredPublicUsers,
+      },
+      { path: "history", name: "History", component: History },
+      { path: "uploads", name: "Uploads", component: Uploads },
+      { path: "settings", name: "Settings", component: Settings },
+    ],
   },
   {
     path: "/welcome-public",
+    redirect: { path: "/welcome-public/home" },
     name: "WelcomePublic",
     component: WelcomePublicComponent,
-  },
-  {
-    path: "/registered-public-users",
-    name: "RegisteredPublicUsers",
-    component: RegisteredPublicUsers, // New route
+    children: [
+      { path: "home", name: "HomePublic", component: HomePublic },
+      { path: "appointments", name: "Appointments", component: Appointments },
+      { path: "gps", name: "GPs", component: GPs },
+      { path: "history", name: "History", component: History },
+      { path: "uploads", name: "Uploads", component: Uploads },
+      { path: "settings", name: "Settings", component: Settings },
+    ],
   },
 ];
 

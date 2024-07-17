@@ -1,9 +1,67 @@
 <template>
   <div>
-    <navbar />
     <v-container class="fill-height d-flex align-center justify-center">
-      <router-view></router-view>
+      <v-card class="elevation-12" style="max-width: 800px; width: 100%">
+        <v-card-title class="text-left">
+          <h1>Register with GPs</h1>
+        </v-card-title>
+        <v-card-text>
+          <v-text-field
+            v-model="searchQuery"
+            label="Search GPs by name or address"
+            variant="outlined"
+            @input="filterGPs"
+          ></v-text-field>
+          <v-list>
+            <v-list-item
+              v-for="gp in filteredGPs"
+              :key="gp._id"
+              @click="selectGP(gp)"
+            >
+              <v-list-item-title>{{ gp.name }}</v-list-item-title>
+              <v-list-item-subtitle>{{ gp.clinicName }}</v-list-item-subtitle>
+              <v-list-item-subtitle>{{ gp.address }}</v-list-item-subtitle>
+              <v-list-item-subtitle
+                v-if="registeredGP && registeredGP._id === gp._id"
+              >
+                Already registered
+              </v-list-item-subtitle>
+            </v-list-item>
+          </v-list>
+        </v-card-text>
+      </v-card>
     </v-container>
+
+    <v-dialog v-model="dialog" persistent max-width="600px">
+      <v-card>
+        <v-card-title class="headline">
+          Register with {{ selectedGP?.name }}
+        </v-card-title>
+        <v-card-text>
+          <p>Are you sure you want to register with {{ selectedGP?.name }}?</p>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="primary" @click="registerWithGP">Yes</v-btn>
+          <v-btn @click="dialog = false">No</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <v-dialog v-model="alreadyRegisteredDialog" persistent max-width="600px">
+      <v-card>
+        <v-card-title class="headline"> Already Registered </v-card-title>
+        <v-card-text>
+          <p>You are already registered with {{ registeredGP?.name }}.</p>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="primary" @click="alreadyRegisteredDialog = false"
+            >OK</v-btn
+          >
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
@@ -12,7 +70,7 @@ import Navbar from "@/components/navbar.vue";
 import axios from "axios";
 
 export default {
-  name: "WelcomePublic",
+  name: "GPs",
   components: {
     Navbar,
   },
