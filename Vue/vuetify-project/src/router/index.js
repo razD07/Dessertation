@@ -3,15 +3,15 @@ import LoginComponent from "@/components/login.vue";
 import RegisterComponent from "@/components/Register.vue";
 import WelcomeGPComponent from "@/components/welcomeGP.vue";
 import WelcomePublicComponent from "@/components/welcomePublic.vue";
-import { getUserNameFromToken } from "@/utils/auth";
-import RegisteredPublicUsers from "@/components/RegisteredPublicUsers.vue"; // New import
 import HomeGP from "@/components/HomeGP.vue";
 import HomePublic from "@/components/HomePublic.vue";
 import Appointments from "@/components/Appointments.vue";
+import RegisteredPublicUsers from "@/components/RegisteredPublicUsers.vue";
 import GPs from "@/components/GPs.vue";
 import History from "@/components/History.vue";
 import Uploads from "@/components/Uploads.vue";
 import Settings from "@/components/Settings.vue";
+import { getUserNameFromToken, getUserTypeFromToken } from "@/utils/auth";
 
 const routes = [
   {
@@ -29,17 +29,18 @@ const routes = [
     redirect: { path: "/welcome-gp/home" },
     name: "WelcomeGP",
     component: WelcomeGPComponent,
+    meta: { requiresAuth: true, userType: "GP" },
     children: [
       { path: "home", name: "HomeGP", component: HomeGP },
-      { path: "appointments", name: "Appointments", component: Appointments },
+      { path: "appointments", name: "AppointmentsGP", component: Appointments },
       {
         path: "registered",
         name: "Registered",
         component: RegisteredPublicUsers,
       },
-      { path: "history", name: "History", component: History },
-      { path: "uploads", name: "Uploads", component: Uploads },
-      { path: "settings", name: "Settings", component: Settings },
+      { path: "history", name: "HistoryGP", component: History },
+      { path: "uploads", name: "UploadsGP", component: Uploads },
+      { path: "settings", name: "SettingsGP", component: Settings },
     ],
   },
   {
@@ -47,13 +48,14 @@ const routes = [
     redirect: { path: "/welcome-public/home" },
     name: "WelcomePublic",
     component: WelcomePublicComponent,
+    meta: { requiresAuth: true, userType: "Public" },
     children: [
       { path: "home", name: "HomePublic", component: HomePublic },
-      { path: "appointments", name: "Appointments", component: Appointments },
+      { path: "appointments", name: "AppointmentsPublic", component: Appointments },
       { path: "gps", name: "GPs", component: GPs },
-      { path: "history", name: "History", component: History },
-      { path: "uploads", name: "Uploads", component: Uploads },
-      { path: "settings", name: "Settings", component: Settings },
+      { path: "history", name: "HistoryPublic", component: History },
+      { path: "uploads", name: "UploadsPublic", component: Uploads },
+      { path: "settings", name: "SettingsPublic", component: Settings },
     ],
   },
 ];
@@ -63,10 +65,10 @@ const router = createRouter({
   routes,
 });
 
-// Navigation guard to check authentication
+// Navigation guard to check authentication and user type
 router.beforeEach((to, from, next) => {
   const publicPages = ["/", "/register"];
-  const authRequired = !publicPages.includes(to.path);
+  const authRequired = to.matched.some((record) => record.meta.requiresAuth);
   const token = localStorage.getItem("token");
 
   if (authRequired && !token) {
@@ -75,10 +77,17 @@ router.beforeEach((to, from, next) => {
 
   if (token) {
     try {
-      const user = getUserNameFromToken(token);
-      if (!user) {
+      const userType = getUserTypeFromToken(token);
+      const userName = getUserNameFromToken(token);
+      if (!userName) {
         localStorage.removeItem("token");
         return next("/");
+      }
+
+      if (authRequired) {
+        if (to.meta.userType && to.meta.userType !== userType) {
+          return next(userType === "GP" ? "/welcome-gp" : "/welcome-public");
+        }
       }
     } catch (error) {
       localStorage.removeItem("token");

@@ -1,8 +1,32 @@
 <template>
   <div>
     <navbar />
-    <v-container class="fill-height d-flex align-center justify-center">
-      <router-view></router-view>
+    <v-container class="fill-height d-flex align-start">
+      <v-navigation-drawer app>
+        <v-list dense>
+          <v-list-item @click="$router.push({ name: 'HomePublic' })">
+            <v-list-item-title>Home</v-list-item-title>
+          </v-list-item>
+          <v-list-item @click="$router.push({ name: 'AppointmentsPublic' })">
+            <v-list-item-title>Appointments</v-list-item-title>
+          </v-list-item>
+          <v-list-item @click="$router.push({ name: 'GPs' })">
+            <v-list-item-title>GPs</v-list-item-title>
+          </v-list-item>
+          <v-list-item @click="$router.push({ name: 'HistoryPublic' })">
+            <v-list-item-title>History</v-list-item-title>
+          </v-list-item>
+          <v-list-item @click="$router.push({ name: 'UploadsPublic' })">
+            <v-list-item-title>Uploads</v-list-item-title>
+          </v-list-item>
+          <v-list-item @click="$router.push({ name: 'SettingsPublic' })">
+            <v-list-item-title>Settings</v-list-item-title>
+          </v-list-item>
+        </v-list>
+      </v-navigation-drawer>
+      <v-main>
+        <router-view></router-view>
+      </v-main>
     </v-container>
   </div>
 </template>

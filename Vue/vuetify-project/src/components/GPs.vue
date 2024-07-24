@@ -1,36 +1,48 @@
 <template>
   <div>
-    <v-container class="fill-height d-flex align-center justify-center">
-      <v-card class="elevation-12" style="max-width: 800px; width: 100%">
+    <v- class="fill-height d-flex align-start justify-start gp-container">
+      <v-card class="elevation-12 gp-card">
         <v-card-title class="text-left">
           <h1>Register with GPs</h1>
         </v-card-title>
         <v-card-text>
+          <v-alert type="info" v-if="registeredGP">
+            Registered with: {{ registeredGP.name }} ({{
+              registeredGP.clinicName
+            }})
+          </v-alert>
+          <v-alert type="warning" v-else>
+            You are not registered with any GP.
+          </v-alert>
           <v-text-field
             v-model="searchQuery"
             label="Search GPs by name or address"
             variant="outlined"
             @input="filterGPs"
+            class="mb-4"
           ></v-text-field>
-          <v-list>
+          <v-list class="gp-list">
             <v-list-item
               v-for="gp in filteredGPs"
               :key="gp._id"
               @click="selectGP(gp)"
+              class="gp-list-item"
             >
-              <v-list-item-title>{{ gp.name }}</v-list-item-title>
-              <v-list-item-subtitle>{{ gp.clinicName }}</v-list-item-subtitle>
-              <v-list-item-subtitle>{{ gp.address }}</v-list-item-subtitle>
-              <v-list-item-subtitle
-                v-if="registeredGP && registeredGP._id === gp._id"
-              >
-                Already registered
-              </v-list-item-subtitle>
+              <v-list-item-content>
+                <v-list-item-title>{{ gp.name }}</v-list-item-title>
+                <v-list-item-subtitle>{{ gp.clinicName }}</v-list-item-subtitle>
+                <v-list-item-subtitle>{{ gp.address }}</v-list-item-subtitle>
+              </v-list-item-content>
+              <v-list-item-action>
+                <v-btn color="primary" @click.stop="selectGP(gp)">
+                  Register
+                </v-btn>
+              </v-list-item-action>
             </v-list-item>
           </v-list>
         </v-card-text>
       </v-card>
-    </v-container>
+    </v->
 
     <v-dialog v-model="dialog" persistent max-width="600px">
       <v-card>
@@ -50,7 +62,7 @@
 
     <v-dialog v-model="alreadyRegisteredDialog" persistent max-width="600px">
       <v-card>
-        <v-card-title class="headline"> Already Registered </v-card-title>
+        <v-card-title class="headline">Already Registered</v-card-title>
         <v-card-text>
           <p>You are already registered with {{ registeredGP?.name }}.</p>
         </v-card-text>
@@ -66,14 +78,11 @@
 </template>
 
 <script>
-import Navbar from "@/components/navbar.vue";
 import axios from "axios";
 
 export default {
   name: "GPs",
-  components: {
-    Navbar,
-  },
+  components: {},
   data() {
     return {
       searchQuery: "",
@@ -115,7 +124,7 @@ export default {
       }
     },
     selectGP(gp) {
-      if (this.registeredGP && this.registeredGP._id === gp._id) {
+      if (this.registeredGP) {
         this.alreadyRegisteredDialog = true;
       } else {
         this.selectedGP = gp;
@@ -168,10 +177,25 @@ export default {
 <style scoped>
 .v-container {
   height: 100vh;
-  background-color: #fff; /* Plain white background */
+  padding: 20px;
+  overflow: hidden; /* Hide the outer scrollbar */
 }
 .v-card {
-  background-color: rgba(255, 255, 255, 0.9);
+  background-color: #ffffff;
   border-radius: 20px;
+  margin-left: 0; /* Align the card with the left side */
+  overflow: auto; /* Add internal scroll */
+  max-height: calc(100vh - 40px); /* Adjust the card height */
+}
+.gp-list-item {
+  border-bottom: 1px solid #ddd;
+  transition: background-color 0.3s;
+}
+.gp-list-item:hover {
+  background-color: #f0f0f0;
+}
+.gp-list {
+  max-height: 40%; /* Adjust as needed */
+  overflow-y: auto; /* Internal vertical scroll */
 }
 </style>

@@ -1,8 +1,6 @@
 <template>
-  <v-app>
-    <v-main>
-      <router-view></router-view>
-    </v-main>
+  <v-app :style="$vuetify.display.mdAndDown ? 'top: 12px;' : 'top: 0px;'">
+    <router-view></router-view>
   </v-app>
 </template>
 
@@ -11,8 +9,5 @@ export default {
   name: "App",
 };
 </script>
-<style>
-html {
-  overflow-y: auto !important;
-}
-</style>
+
+<style scoped></style>

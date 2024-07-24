@@ -339,3 +339,35 @@ app.get("/api/registeredGP/:publicUserId", async (req, res) => {
       .send({ error: "An error occurred while fetching registered GP." });
   }
 });
+
+// Route to fetch the registered GP for a public user
+app.get("/api/registeredGP/:publicUserId", async (req, res) => {
+  const { publicUserId } = req.params;
+
+  try {
+    const publicUserCollection = database.collection("publicUsersCollection");
+    const publicUser = await publicUserCollection.findOne({
+      _id: new ObjectId(publicUserId),
+    });
+
+    if (!publicUser) {
+      return res.status(404).send({ error: "Public user not found" });
+    }
+
+    if (!publicUser.registeredGP) {
+      return res.status(404).send({ error: "No GP registered" });
+    }
+
+    const gpCollection = database.collection("gpCollection");
+    const registeredGP = await gpCollection.findOne({
+      _id: new ObjectId(publicUser.registeredGP),
+    });
+
+    res.send(registeredGP);
+  } catch (error) {
+    console.error("Error fetching registered GP:", error);
+    res
+      .status(500)
+      .send({ error: "An error occurred while fetching the registered GP" });
+  }
+});
