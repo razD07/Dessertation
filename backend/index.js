@@ -185,6 +185,7 @@ app.post("/register/public", multer().none(), async (req, res) => {
       dob,
       password: hashedPassword,
       registeredGP: null, // Initialize with no registered GP
+      appointments: [], // Initialize with no appointments
     };
     const result = await database
       .collection("publicUsersCollection")
@@ -371,3 +372,157 @@ app.get("/api/registeredGP/:publicUserId", async (req, res) => {
       .send({ error: "An error occurred while fetching the registered GP" });
   }
 });
+
+// Route to set GP availability
+app.post("/api/setAvailability", async (req, res) => {
+  const { gpId, availability } = req.body;
+
+  if (!gpId || !availability) {
+    return res
+      .status(400)
+      .send({ error: "GP ID and availability are required" });
+  }
+
+  try {
+    const gpCollection = database.collection("gpCollection");
+    await gpCollection.updateOne(
+      { _id: new ObjectId(gpId) },
+      { $set: { availability } }
+    );
+
+    res.send({ message: "Availability set successfully" });
+  } catch (error) {
+    console.error("Error setting availability:", error);
+    res
+      .status(500)
+      .send({ error: "An error occurred while setting availability" });
+  }
+});
+
+// Route to fetch GP availability
+app.get("/api/getAvailability/:gpId", async (req, res) => {
+  const { gpId } = req.params;
+
+  try {
+    const gpCollection = database.collection("gpCollection");
+    const gp = await gpCollection.findOne({ _id: new ObjectId(gpId) });
+
+    if (!gp) {
+      return res.status(404).send({ error: "GP not found" });
+    }
+
+    res.send({ availability: gp.availability });
+  } catch (error) {
+    console.error("Error fetching availability:", error);
+    res
+      .status(500)
+      .send({ error: "An error occurred while fetching availability" });
+  }
+});
+
+// Route to book an appointment
+app.post("/api/bookAppointment", async (req, res) => {
+  const { publicUserId, date, time } = req.body;
+
+  if (!publicUserId || !date || !time) {
+    return res.status(400).send({ error: "All fields are required" });
+  }
+
+  try {
+    const publicUserCollection = database.collection("publicUsersCollection");
+    const publicUser = await publicUserCollection.findOne({
+      _id: new ObjectId(publicUserId),
+    });
+
+    if (!publicUser) {
+      return res.status(404).send({ error: "Public user not found" });
+    }
+
+    if (publicUser.appointments && publicUser.appointments.length > 0) {
+      return res.status(400).send({ error: "User already has an appointment" });
+    }
+
+    await publicUserCollection.updateOne(
+      { _id: new ObjectId(publicUserId) },
+      { $push: { appointments: {  date, time } } }
+    );
+
+    res.send({ message: "Appointment booked successfully" });
+  } catch (error) {
+    console.error("Error booking appointment:", error);
+    res
+      .status(500)
+      .send({ error: "An error occurred while booking the appointment" });
+  }
+});
+
+// Route to fetch public user appointments
+app.get("/api/getAppointments/:publicUserId", async (req, res) => {
+  const { publicUserId } = req.params;
+
+  try {
+    const publicUserCollection = database.collection("publicUsersCollection");
+    const publicUser = await publicUserCollection.findOne({
+      _id: new ObjectId(publicUserId),
+    });
+
+    if (!publicUser) {
+      return res.status(404).send({ error: "Public user not found" });
+    }
+
+    res.send(publicUser.appointments || []);
+  } catch (error) {
+    console.error("Error fetching appointments:", error);
+    res
+      .status(500)
+      .send({ error: "An error occurred while fetching appointments" });
+  }
+});
+
+// Route to get upcoming appointments for a public user
+app.get("/api/upcomingAppointments/:publicUserId", async (req, res) => {
+  const { publicUserId } = req.params;
+
+  try {
+    const user = await database
+      .collection("publicUsersCollection")
+      .findOne({ _id: new ObjectId(publicUserId) });
+
+    if (!user) {
+      return res.status(404).send({ error: "User not found" });
+    }
+
+    const upcomingAppointments = user.appointments || [];
+
+    res.send(upcomingAppointments);
+  } catch (error) {
+    console.error("Error fetching upcoming appointments:", error);
+    res.status(500).send({ error: "An error occurred while fetching upcoming appointments." });
+  }
+});
+
+// Route to cancel an appointment
+app.post("/api/cancelAppointment", async (req, res) => {
+  const { publicUserId } = req.body;
+
+  if (!publicUserId) {
+    return res.status(400).send({ error: "Public user ID is required" });
+  }
+
+  try {
+    const result = await database.collection("publicUsersCollection").updateOne(
+      { _id: new ObjectId(publicUserId) },
+      { $set: { appointments: [] } } // Remove the appointment for the user
+    );
+
+    if (result.modifiedCount === 0) {
+      return res.status(404).send({ error: "No appointment found to cancel" });
+    }
+
+    res.send({ message: "Appointment cancelled successfully" });
+  } catch (error) {
+    console.error("Error cancelling appointment:", error);
+    res.status(500).send({ error: "An error occurred while cancelling the appointment." });
+  }
+});
+
