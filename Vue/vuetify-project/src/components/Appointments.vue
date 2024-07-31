@@ -60,18 +60,12 @@
               </template>
             </Qalendar>
           </div>
-          <div
-            v-if="
-              !isGP && upcomingAppointment
-                ? upcomingAppointment.length > 0
-                : false
-            "
-          >
+          <div v-if="!isGP && upcomingAppointment">
             <h2>Upcoming Appointment</h2>
             <v-card>
               <v-card-title>
-                On {{ upcomingAppointment[0]?.date }} from
-                {{ upcomingAppointment[0]?.time }}
+                On {{ upcomingAppointment.date }} from
+                {{ upcomingAppointment.time }}
               </v-card-title>
               <v-card-subtitle>{{
                 upcomingAppointment.gpName
@@ -87,8 +81,6 @@
         </v-card-text>
       </v-card>
     </v-container>
-
-    <!-- Upcoming Appointment Section -->
   </div>
 </template>
 
@@ -113,13 +105,13 @@ export default {
         "Sunday",
       ],
       availability: {
-        Monday: [],
-        Tuesday: [],
-        Wednesday: [],
-        Thursday: [],
-        Friday: [],
-        Saturday: [],
-        Sunday: [],
+        Monday: "",
+        Tuesday: "",
+        Wednesday: "",
+        Thursday: "",
+        Friday: "",
+        Saturday: "",
+        Sunday: "",
       },
       selectedSlot: null,
       availableSlots: [],
@@ -222,7 +214,9 @@ export default {
         const response = await axios.get(
           `http://localhost:5038/api/upcomingAppointments/${publicUserId}`
         );
-        this.upcomingAppointment = response.data || null; // Assuming only one appointment
+        this.upcomingAppointment = response.data.length
+          ? response.data[0]
+          : null; // Assuming only one appointment
       } catch (error) {
         console.error("Error fetching upcoming appointment:", error);
         alert("Failed to fetch upcoming appointment.");
@@ -240,9 +234,15 @@ export default {
           date: selectedEvent.date,
           time: selectedEvent.time,
         });
-        alert("Appointment booked successfully!");
+        // alert("Appointment booked successfully!");
         this.dialog = false;
         this.fetchUpcomingAppointment();
+        // Update GP availability
+        this.updateGPAvailability(
+          selectedEvent.date,
+          selectedEvent.time,
+          "remove"
+        );
       } catch (error) {
         console.error("Error booking appointment:", error);
         alert("Failed to book appointment.");
@@ -255,14 +255,47 @@ export default {
           alert("User ID not found. Please log in again.");
           return;
         }
+        const appointment = this.upcomingAppointment;
         await axios.post(`http://localhost:5038/api/cancelAppointment`, {
           publicUserId,
         });
-        alert("Appointment cancelled successfully!");
+        // alert("Appointment cancelled successfully!");
         this.upcomingAppointment = null;
+        // Update GP availability
+        this.updateGPAvailability(appointment.date, appointment.time, "add");
       } catch (error) {
         console.error("Error cancelling appointment:", error);
         alert("Failed to cancel appointment.");
+      }
+    },
+    async updateGPAvailability(date, time, action) {
+      try {
+        const publicUserId = localStorage.getItem("userId");
+        const response = await axios.get(
+          `http://localhost:5038/api/registeredGP/${publicUserId}`
+        );
+        const gpId = response.data._id;
+        const availabilityResponse = await axios.get(
+          `http://localhost:5038/api/getAvailability/${gpId}`
+        );
+        let availability = availabilityResponse.data.availability || {};
+        const day = new Date(date).toLocaleDateString("en-US", {
+          weekday: "long",
+        });
+        if (!availability[day]) availability[day] = [];
+        if (action === "remove") {
+          availability[day] = availability[day].filter((slot) => slot !== time);
+        } else if (action === "add") {
+          availability[day].push(time);
+        }
+
+        await axios.post(`http://localhost:5038/api/setAvailability`, {
+          gpId,
+          availability,
+        });
+        this.initializeEvents();
+      } catch (error) {
+        console.error(`Error updating GP availability:`, error);
       }
     },
     initializeEvents() {

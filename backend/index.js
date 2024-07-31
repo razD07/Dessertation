@@ -4,23 +4,23 @@ const cors = require("cors");
 const multer = require("multer");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const fs = require("fs");
+const path = require("path");
+const { google } = require('googleapis');
+const { uploadFile } = require("./googleDrive");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-const CONNECTION_STRING =
-  "mongodb+srv://admin:chiraz1996@cluster0.ktvrcpe.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
+const CONNECTION_STRING = "mongodb+srv://admin:chiraz1996@cluster0.ktvrcpe.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
 const DATABASENAME = "tester";
 const JWT_SECRET = "your_jwt_secret"; // Change this to a more secure secret
 let database;
 
 const connectToDatabase = async () => {
   try {
-    const client = await MongoClient.connect(CONNECTION_STRING, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
+    const client = await MongoClient.connect(CONNECTION_STRING);
     database = client.db(DATABASENAME);
     console.log("Connected to database successfully");
   } catch (error) {
@@ -34,6 +34,12 @@ connectToDatabase();
 app.listen(5038, () => {
   console.log("Server is running on port 5038");
 });
+
+// Ensure the uploads directory exists
+const uploadDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir);
+}
 
 // Central error handling middleware
 app.use((req, res, next) => {
@@ -378,24 +384,33 @@ app.post("/api/setAvailability", async (req, res) => {
   const { gpId, availability } = req.body;
 
   if (!gpId || !availability) {
-    return res
-      .status(400)
-      .send({ error: "GP ID and availability are required" });
+    return res.status(400).send({ error: "GP ID and availability are required" });
   }
 
   try {
+    const formattedAvailability = {};
+
+    // Ensure each day's availability is an array
+    for (const day in availability) {
+      if (availability[day] && typeof availability[day] === 'string') {
+        formattedAvailability[day] = availability[day].split(',').map(slot => slot.trim());
+      } else if (Array.isArray(availability[day])) {
+        formattedAvailability[day] = availability[day];
+      } else {
+        formattedAvailability[day] = [];
+      }
+    }
+
     const gpCollection = database.collection("gpCollection");
     await gpCollection.updateOne(
       { _id: new ObjectId(gpId) },
-      { $set: { availability } }
+      { $set: { availability: formattedAvailability } }
     );
 
     res.send({ message: "Availability set successfully" });
   } catch (error) {
     console.error("Error setting availability:", error);
-    res
-      .status(500)
-      .send({ error: "An error occurred while setting availability" });
+    res.status(500).send({ error: "An error occurred while setting availability" });
   }
 });
 
@@ -430,6 +445,8 @@ app.post("/api/bookAppointment", async (req, res) => {
 
   try {
     const publicUserCollection = database.collection("publicUsersCollection");
+    const gpCollection = database.collection("gpCollection");
+
     const publicUser = await publicUserCollection.findOne({
       _id: new ObjectId(publicUserId),
     });
@@ -442,17 +459,38 @@ app.post("/api/bookAppointment", async (req, res) => {
       return res.status(400).send({ error: "User already has an appointment" });
     }
 
+    const dayOfWeek = new Date(date).toLocaleString("en-US", { weekday: "long" });
+    const [start, end] = time.split(" - ");
+
+    const gp = await gpCollection.findOne({ _id: new ObjectId(publicUser.registeredGP) });
+
+    if (!gp) {
+      return res.status(404).send({ error: "GP not found" });
+    }
+
+    // Split the availability slot for the appointment
+    let newAvailability = [];
+    gp.availability[dayOfWeek].forEach((slot) => {
+      const splitSlots = splitSlot(slot, `${start}-${end}`);
+      newAvailability = newAvailability.concat(splitSlots);
+    });
+
+    newAvailability = newAvailability.filter((slot) => slot !== "-");
+
+    await gpCollection.updateOne(
+      { _id: new ObjectId(publicUser.registeredGP) },
+      { $set: { [`availability.${dayOfWeek}`]: newAvailability } }
+    );
+
     await publicUserCollection.updateOne(
       { _id: new ObjectId(publicUserId) },
-      { $push: { appointments: {  date, time } } }
+      { $push: { appointments: { date, time, gpId: publicUser.registeredGP } } }
     );
 
     res.send({ message: "Appointment booked successfully" });
   } catch (error) {
     console.error("Error booking appointment:", error);
-    res
-      .status(500)
-      .send({ error: "An error occurred while booking the appointment" });
+    res.status(500).send({ error: "An error occurred while booking the appointment" });
   }
 });
 
@@ -510,14 +548,40 @@ app.post("/api/cancelAppointment", async (req, res) => {
   }
 
   try {
-    const result = await database.collection("publicUsersCollection").updateOne(
-      { _id: new ObjectId(publicUserId) },
-      { $set: { appointments: [] } } // Remove the appointment for the user
-    );
+    const publicUserCollection = database.collection("publicUsersCollection");
+    const gpCollection = database.collection("gpCollection");
 
-    if (result.modifiedCount === 0) {
+    const publicUser = await publicUserCollection.findOne({
+      _id: new ObjectId(publicUserId),
+    });
+
+    if (!publicUser || !publicUser.appointments || publicUser.appointments.length === 0) {
       return res.status(404).send({ error: "No appointment found to cancel" });
     }
+
+    const appointment = publicUser.appointments[0]; // Assuming there's only one appointment
+    const { date, time, gpId } = appointment;
+
+    const dayOfWeek = new Date(date).toLocaleString("en-US", { weekday: "long" });
+    const [start, end] = time.split(" - ");
+
+    let availability = await gpCollection.findOne(
+      { _id: new ObjectId(gpId) },
+      { projection: { [`availability.${dayOfWeek}`]: 1 } }
+    );
+
+    // Push the canceled appointment time back into availability and merge slots
+    availability = mergeSlots(availability.availability[dayOfWeek], `${start}-${end}`);
+
+    await gpCollection.updateOne(
+      { _id: new ObjectId(gpId) },
+      { $set: { [`availability.${dayOfWeek}`]: availability } }
+    );
+
+    await publicUserCollection.updateOne(
+      { _id: new ObjectId(publicUserId) },
+      { $set: { appointments: [] } }
+    );
 
     res.send({ message: "Appointment cancelled successfully" });
   } catch (error) {
@@ -526,3 +590,147 @@ app.post("/api/cancelAppointment", async (req, res) => {
   }
 });
 
+// Fetch user details by ID
+app.get("/api/user/:userId", async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    const gpUser = await database.collection("gpCollection").findOne({ _id: new ObjectId(userId) });
+    const publicUser = await database.collection("publicUsersCollection").findOne({ _id: new ObjectId(userId) });
+
+    const user = gpUser || publicUser;
+    if (!user) {
+      return res.status(404).send({ error: "User not found" });
+    }
+
+    res.send(user);
+  } catch (error) {
+    console.error("Error fetching user details:", error);
+    res.status(500).send({ error: "An error occurred while fetching user details." });
+  }
+});
+
+// Update user details
+app.put("/api/user/:userId", async (req, res) => {
+  const { userId } = req.params;
+  const { password, _id, ...updatedDetails } = req.body; // Exclude _id from the update
+
+  try {
+    if (password) {
+      updatedDetails.password = await bcrypt.hash(password, 10);
+    }
+
+    const gpUser = await database.collection("gpCollection").findOne({ _id: new ObjectId(userId) });
+    const publicUser = await database.collection("publicUsersCollection").findOne({ _id: new ObjectId(userId) });
+
+    if (gpUser) {
+      await database.collection("gpCollection").updateOne(
+        { _id: new ObjectId(userId) },
+        { $set: updatedDetails }
+      );
+    } else if (publicUser) {
+      await database.collection("publicUsersCollection").updateOne(
+        { _id: new ObjectId(userId) },
+        { $set: updatedDetails }
+      );
+    } else {
+      return res.status(404).send({ error: "User not found" });
+    }
+
+    res.send({ message: "User details updated successfully" });
+  } catch (error) {
+    console.error("Error updating user details:", error);
+    res.status(500).send({ error: "An error occurred while updating user details." });
+  }
+});
+
+
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "tempUploads/");
+  },
+  filename: (req, file, cb) => {
+    cb(null, `${Date.now()}-${file.originalname}`);
+  },
+});
+const upload = multer({ storage });
+
+// Upload profile photo
+app.post("/api/user/uploadPhoto/:userId", upload.single("profilePhoto"), async (req, res) => {
+  const { userId } = req.params;
+
+  if (!req.file) {
+    return res.status(400).send({ error: "No file uploaded" });
+  }
+
+  try {
+    const response = await uploadFile(req.file.path, req.file.filename);
+    const profilePhotoUrl = `https://drive.google.com/uc?id=${response.id}`;
+
+    const gpUser = await database.collection("gpCollection").findOne({ _id: new ObjectId(userId) });
+    const publicUser = await database.collection("publicUsersCollection").findOne({ _id: new ObjectId(userId) });
+
+    if (gpUser) {
+      await database.collection("gpCollection").updateOne(
+        { _id: new ObjectId(userId) },
+        { $set: { profilePhoto: profilePhotoUrl } }
+      );
+    } else if (publicUser) {
+      await database.collection("publicUsersCollection").updateOne(
+        { _id: new ObjectId(userId) },
+        { $set: { profilePhoto: profilePhotoUrl } }
+      );
+    } else {
+      return res.status(404).send({ error: "User not found" });
+    }
+
+    // Delete the file from the server after uploading to Google Drive
+    fs.unlinkSync(req.file.path);
+
+    res.send({ message: "Profile photo uploaded successfully", profilePhotoUrl });
+  } catch (error) {
+    console.error("Error uploading profile photo:", error);
+    res.status(500).send({ error: "An error occurred while uploading profile photo." });
+  }
+});
+
+function splitSlot(slot, appointmentTime) {
+  const [slotStart, slotEnd] = slot.split("-");
+  const [appStart, appEnd] = appointmentTime.split("-");
+
+  if (slotStart <= appStart && slotEnd >= appEnd) {
+    return [`${slotStart}-${appStart}`, `${appEnd}-${slotEnd}`];
+  }
+
+  return [slot];
+}
+
+function mergeSlots(slots, canceledTime) {
+  slots.push(canceledTime);
+  slots.sort((a, b) => {
+    const [aStart] = a.split("-");
+    const [bStart] = b.split("-");
+    return new Date(`1970-01-01T${aStart}Z`) - new Date(`1970-01-01T${bStart}Z`);
+  });
+
+  const merged = [];
+  let current = slots[0];
+
+  for (let i = 1; i < slots.length; i++) {
+    const [currentStart, currentEnd] = current.split("-");
+    const [nextStart, nextEnd] = slots[i].split("-");
+
+    if (currentEnd === nextStart) {
+      current = `${currentStart}-${nextEnd}`;
+    } else {
+      merged.push(current);
+      current = slots[i];
+    }
+  }
+  merged.push(current);
+
+  return merged;
+}
+
+module.exports = app;
