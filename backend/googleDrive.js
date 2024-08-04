@@ -1,36 +1,22 @@
 const { google } = require('googleapis');
-const fs = require('fs');
 const path = require('path');
+const fs = require('fs');
+const credentials = require('./credentials.json');
 
-// Load the credentials from a file
-const CREDENTIALS_PATH = path.join(__dirname, 'credentials.json');
-const TOKEN_PATH = path.join(__dirname, 'token.json');
-
-// Scopes for accessing Google Drive
 const SCOPES = ['https://www.googleapis.com/auth/drive.file'];
+const auth = new google.auth.GoogleAuth({
+  keyFile: path.join(__dirname, 'credentials.json'),
+  scopes: SCOPES,
+});
 
-let drive;
+const drive = google.drive({ version: 'v3', auth });
 
-// Authenticate with Google Drive
-async function authenticate() {
-  const auth = new google.auth.GoogleAuth({
-    keyFile: CREDENTIALS_PATH,
-    scopes: SCOPES,
-  });
-
-  drive = google.drive({ version: 'v3', auth });
-}
-
-// Upload file to Google Drive
-async function uploadFile(filePath, fileName) {
-  if (!drive) {
-    await authenticate();
-  }
-
+async function uploadFile(filePath, filename) {
   const fileMetadata = {
-    name: fileName,
-    parents: ['11hs8KAAbI-xM--fgkno3wPLK9zTQahhg'], 
+    name: filename,
+    parents: ['11hs8KAAbI-xM--fgkno3wPLK9zTQahhg'],
   };
+
   const media = {
     mimeType: 'image/jpeg',
     body: fs.createReadStream(filePath),
@@ -42,9 +28,24 @@ async function uploadFile(filePath, fileName) {
     fields: 'id',
   });
 
-  return response.data;
+  const fileId = response.data.id;
+
+  // Make the file public
+  await drive.permissions.create({
+    fileId: fileId,
+    requestBody: {
+      role: 'reader',
+      type: 'anyone',
+    },
+  });
+
+  // Get the public URL
+  const fileUrl = `https://drive.google.com/uc?id=${fileId}`;
+
+  return {
+    id: fileId,
+    url: fileUrl,
+  };
 }
 
-module.exports = {
-  uploadFile,
-};
+module.exports = { uploadFile };

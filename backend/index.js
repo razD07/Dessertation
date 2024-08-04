@@ -666,7 +666,7 @@ app.post("/api/user/uploadPhoto/:userId", upload.single("profilePhoto"), async (
 
   try {
     const response = await uploadFile(req.file.path, req.file.filename);
-    const profilePhotoUrl = `https://drive.google.com/uc?id=${response.id}`;
+    const profilePhotoUrl = response.url;
 
     const gpUser = await database.collection("gpCollection").findOne({ _id: new ObjectId(userId) });
     const publicUser = await database.collection("publicUsersCollection").findOne({ _id: new ObjectId(userId) });
@@ -694,6 +694,7 @@ app.post("/api/user/uploadPhoto/:userId", upload.single("profilePhoto"), async (
     res.status(500).send({ error: "An error occurred while uploading profile photo." });
   }
 });
+
 
 function splitSlot(slot, appointmentTime) {
   const [slotStart, slotEnd] = slot.split("-");
@@ -732,5 +733,95 @@ function mergeSlots(slots, canceledTime) {
 
   return merged;
 }
+
+// Submit review and rating
+app.post("/api/review", async (req, res) => {
+  const { userId, gpId, rating, review } = req.body;
+
+  if (!userId || !gpId || rating == null || !review) {
+    return res.status(400).send({ error: "All fields are required" });
+  }
+
+  try {
+    const publicUserCollection = database.collection("publicUsersCollection");
+    const gpCollection = database.collection("gpCollection");
+
+    const publicUser = await publicUserCollection.findOne({ _id: new ObjectId(userId) });
+    const gp = await gpCollection.findOne({ _id: new ObjectId(gpId) });
+
+    if (!publicUser || !gp) {
+      return res.status(404).send({ error: "User or GP not found" });
+    }
+
+    if (publicUser.registeredGP !== gpId) {
+      return res.status(403).send({ error: "User is not registered with this GP" });
+    }
+
+    const reviewData = {
+      gpId,
+      rating,
+      review,
+      userName: publicUser.name,
+      userProfilePhoto: publicUser.profilePhoto,
+      date: new Date()
+    };
+
+    await publicUserCollection.updateOne(
+      { _id: new ObjectId(userId) },
+      { $push: { reviews: reviewData } }
+    );
+
+    res.send({ message: "Review submitted successfully" });
+  } catch (error) {
+    console.error("Error submitting review:", error);
+    res.status(500).send({ error: "An error occurred while submitting the review" });
+  }
+});
+
+// Fetch GP reviews and average rating
+app.get("/api/gp/reviews/:gpId", async (req, res) => {
+  const { gpId } = req.params;
+
+  try {
+    const publicUserCollection = database.collection("publicUsersCollection");
+    const reviews = await publicUserCollection
+      .aggregate([
+        { $match: { "reviews.gpId": gpId } },
+        { $unwind: "$reviews" },
+        { $match: { "reviews.gpId": gpId } },
+        {
+          $lookup: {
+            from: "publicUsersCollection",
+            localField: "_id",
+            foreignField: "_id",
+            as: "user"
+          }
+        },
+        { $unwind: "$user" },
+        {
+          $group: {
+            _id: null,
+            reviews: {
+              $push: {
+                rating: "$reviews.rating",
+                review: "$reviews.review",
+                userName: "$user.name",
+                userProfilePhoto: "$user.profilePhoto"
+              }
+            },
+            averageRating: { $avg: "$reviews.rating" }
+          }
+        }
+      ])
+      .toArray();
+
+    const result = reviews[0] || { reviews: [], averageRating: 0 };
+    res.send(result);
+  } catch (error) {
+    console.error("Error fetching reviews:", error);
+    res.status(500).send({ error: "An error occurred while fetching reviews" });
+  }
+});
+
 
 module.exports = app;

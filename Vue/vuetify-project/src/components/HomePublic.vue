@@ -7,7 +7,7 @@
             <v-col cols="12">
               <v-avatar size="100" class="mx-auto">
                 <img
-                  :src="user.profilePhoto || 'default-avatar.png'"
+                  :src="user.profilePhoto || defaultProfileIcon"
                   alt="Profile Photo"
                 />
               </v-avatar>
@@ -25,21 +25,18 @@
         <v-card class="pa-5">
           <v-card-title>Upcoming Appointments</v-card-title>
           <v-list>
-            <v-list-item-group>
-              <v-list-item
-                v-for="appointment in upcomingAppointments"
-                :key="appointment._id"
-              >
-                <v-list-item-content>
-                  <v-list-item-title>
-                    {{ appointment.date }} at {{ appointment.time }}
-                  </v-list-item-title>
-                  <v-list-item-subtitle
-                    >With Dr. {{ appointment.gpName }}</v-list-item-subtitle
-                  >
-                </v-list-item-content>
-              </v-list-item>
-            </v-list-item-group>
+            <v-list-item
+              v-for="appointment in upcomingAppointments"
+              :key="appointment._id"
+            >
+              <v-list-item-title>
+                <strong>{{ appointment.date }}</strong> at
+                <strong>{{ appointment.time }}</strong>
+              </v-list-item-title>
+              <v-list-item-subtitle>
+                With Dr. <strong>{{ registeredGP?.name }}</strong>
+              </v-list-item-subtitle>
+            </v-list-item>
           </v-list>
         </v-card>
       </v-col>
@@ -49,9 +46,9 @@
       <v-col cols="12" md="8">
         <v-card class="pa-5">
           <v-card-title>No Upcoming Appointments</v-card-title>
-          <v-card-text
-            >You have no upcoming appointments. Book one now!</v-card-text
-          >
+          <v-card-text>
+            You have no upcoming appointments. Book one now!
+          </v-card-text>
         </v-card>
       </v-col>
     </v-row>
@@ -60,6 +57,7 @@
 
 <script>
 import axios from "axios";
+import defaultProfileIcon from "@/assets/default-profile-icon.png";
 
 export default {
   name: "HomePublic",
@@ -67,11 +65,14 @@ export default {
     return {
       user: {},
       upcomingAppointments: [],
+      registeredGP: null,
+      defaultProfileIcon,
     };
   },
   created() {
     this.fetchUserData();
     this.fetchUpcomingAppointments();
+    this.fetchRegisteredGP();
   },
   methods: {
     async fetchUserData() {
@@ -102,6 +103,21 @@ export default {
         this.upcomingAppointments = response.data;
       } catch (error) {
         console.error("Error fetching upcoming appointments:", error);
+      }
+    },
+    async fetchRegisteredGP() {
+      try {
+        const userId = localStorage.getItem("userId");
+        const token = localStorage.getItem("token");
+        const response = await axios.get(
+          `http://localhost:5038/api/registeredGP/${userId}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        this.registeredGP = response.data;
+      } catch (error) {
+        console.error("Error fetching registered GP:", error);
       }
     },
   },

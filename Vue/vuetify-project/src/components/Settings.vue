@@ -6,7 +6,10 @@
         <div class="profile-photo-container">
           {{ user.profilePhoto }}
           <v-avatar size="200">
-            <img :src="user.profilePhoto" alt="Profile Photo" />
+            <img
+              :src="user.profilePhoto || defaultProfileIcon"
+              alt="Profile Photo"
+            />
           </v-avatar>
           <v-btn icon class="edit-photo-btn" @click="openPhotoUpload">
             <v-icon>mdi-pencil</v-icon>
@@ -75,6 +78,7 @@
 
 <script>
 import axios from "axios";
+import defaultProfileIcon from "@/assets/default-profile-icon.png";
 
 export default {
   name: "Settings",
@@ -84,6 +88,7 @@ export default {
       editUser: {},
       editDialog: false,
       isGP: false,
+      defaultProfileIcon,
     };
   },
   created() {
