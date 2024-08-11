@@ -21,7 +21,7 @@
 </template>
 
 <script>
-import { getUserNameFromToken, getUserTypeFromToken } from "@/utils/auth"; // Adjust the path as needed
+import { getUserNameFromToken, getUserTypeFromToken } from "@/utils/auth"; 
 
 export default {
   name: "Navbar",
@@ -49,6 +49,6 @@ export default {
 
 <style scoped>
 .v-app-bar {
-  background-color: #1976d2; /* Customize the color as needed */
+  background-color: #1976d2;
 }
 </style>

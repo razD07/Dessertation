@@ -27,12 +27,13 @@
     "vuetify": "^3.5.0"
   },
   "devDependencies": {
-    "@babel/preset-env": "^7.24.7",
+    "@babel/core": "^7.25.2",
+    "@babel/preset-env": "^7.25.3",
     "@vitejs/plugin-vue": "^5.0.4",
     "@vue/cli-plugin-unit-jest": "~5.0.0",
     "@vue/test-utils": "^2.0.0-0",
     "@vue/vue3-jest": "^27.0.0-alpha.1",
-    "babel-jest": "^27.0.6",
+    "babel-jest": "^27.5.1",
     "jest": "^27.0.5",
     "sass": "^1.71.1",
     "unplugin-fonts": "^1.1.1",

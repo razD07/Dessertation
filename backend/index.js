@@ -15,7 +15,7 @@ app.use(express.json());
 
 const CONNECTION_STRING = "mongodb+srv://admin:chiraz1996@cluster0.ktvrcpe.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
 const DATABASENAME = "tester";
-const JWT_SECRET = "your_jwt_secret"; // Change this to a more secure secret
+const JWT_SECRET = "jwt_secret";
 let database;
 
 const connectToDatabase = async () => {
@@ -57,46 +57,46 @@ app.get("/", (req, res) => {
 });
 
 // Define routes after successful database connection
-app.get("/Tester/GetTest", async (req, res) => {
-  try {
-    const result = await database
-      .collection("testerCollection")
-      .find({})
-      .toArray();
-    res.send(result);
-  } catch (error) {
-    console.error("Error fetching data:", error);
-    res.status(500).send({ error: "An error occurred while fetching data." });
-  }
-});
+// app.get("/Tester/GetTest", async (req, res) => {
+//   try {
+//     const result = await database
+//       .collection("testerCollection")
+//       .find({})
+//       .toArray();
+//     res.send(result);
+//   } catch (error) {
+//     console.error("Error fetching data:", error);
+//     res.status(500).send({ error: "An error occurred while fetching data." });
+//   }
+// });
 
-app.post("/Tester/AddTest", multer().none(), async (req, res) => {
-  try {
-    const numOfDocs = await database
-      .collection("testerCollection")
-      .countDocuments({});
-    await database.collection("testerCollection").insertOne({
-      id: (numOfDocs + 1).toString(),
-      description: req.body.newNotes,
-    });
-    res.json("Added Successfully");
-  } catch (error) {
-    console.error("Error adding note:", error);
-    res.status(500).send({ error: "Cannot add data" });
-  }
-});
+// app.post("/Tester/AddTest", multer().none(), async (req, res) => {
+//   try {
+//     const numOfDocs = await database
+//       .collection("testerCollection")
+//       .countDocuments({});
+//     await database.collection("testerCollection").insertOne({
+//       id: (numOfDocs + 1).toString(),
+//       description: req.body.newNotes,
+//     });
+//     res.json("Added Successfully");
+//   } catch (error) {
+//     console.error("Error adding note:", error);
+//     res.status(500).send({ error: "Cannot add data" });
+//   }
+// });
 
-app.delete("/Tester/DeleteTest", async (req, res) => {
-  try {
-    await database.collection("testerCollection").deleteOne({
-      id: req.query.id,
-    });
-    res.json("Deleted Successfully");
-  } catch (error) {
-    console.error("Error deleting data:", error);
-    res.status(500).send({ error: "Cannot delete data" });
-  }
-});
+// app.delete("/Tester/DeleteTest", async (req, res) => {
+//   try {
+//     await database.collection("testerCollection").deleteOne({
+//       id: req.query.id,
+//     });
+//     res.json("Deleted Successfully");
+//   } catch (error) {
+//     console.error("Error deleting data:", error);
+//     res.status(500).send({ error: "Cannot delete data" });
+//   }
+// });
 
 // New route to check if a user already exists
 app.get("/checkUserExists", async (req, res) => {

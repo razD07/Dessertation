@@ -4,7 +4,13 @@
       <v-card class="elevation-12 gp-card">
         <v-card-title class="text-left">
           <h1 v-if="isGP">Set Availability</h1>
-          <h1 v-else>Book Appointment</h1>
+          <div v-else>
+            <h1>Book Appointment</h1>
+            <p style="color: red">
+              We would remind patients that if you consider your condition to be
+              life threatening dial 999 or attend hospital without delay.
+            </p>
+          </div>
         </v-card-title>
         <v-card-text>
           <v-alert v-if="isGP" type="info">
@@ -13,7 +19,6 @@
           <v-alert v-else type="info">
             Book an appointment with your registered GP.
           </v-alert>
-
           <v-form ref="form">
             <v-row v-for="day in days" :key="day" class="mb-3" v-if="isGP">
               <v-col cols="12">
