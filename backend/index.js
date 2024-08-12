@@ -56,48 +56,6 @@ app.get("/", (req, res) => {
   }
 });
 
-// Define routes after successful database connection
-// app.get("/Tester/GetTest", async (req, res) => {
-//   try {
-//     const result = await database
-//       .collection("testerCollection")
-//       .find({})
-//       .toArray();
-//     res.send(result);
-//   } catch (error) {
-//     console.error("Error fetching data:", error);
-//     res.status(500).send({ error: "An error occurred while fetching data." });
-//   }
-// });
-
-// app.post("/Tester/AddTest", multer().none(), async (req, res) => {
-//   try {
-//     const numOfDocs = await database
-//       .collection("testerCollection")
-//       .countDocuments({});
-//     await database.collection("testerCollection").insertOne({
-//       id: (numOfDocs + 1).toString(),
-//       description: req.body.newNotes,
-//     });
-//     res.json("Added Successfully");
-//   } catch (error) {
-//     console.error("Error adding note:", error);
-//     res.status(500).send({ error: "Cannot add data" });
-//   }
-// });
-
-// app.delete("/Tester/DeleteTest", async (req, res) => {
-//   try {
-//     await database.collection("testerCollection").deleteOne({
-//       id: req.query.id,
-//     });
-//     res.json("Deleted Successfully");
-//   } catch (error) {
-//     console.error("Error deleting data:", error);
-//     res.status(500).send({ error: "Cannot delete data" });
-//   }
-// });
-
 // New route to check if a user already exists
 app.get("/checkUserExists", async (req, res) => {
   const { email } = req.query;
@@ -152,13 +110,13 @@ app.post("/register/gp", multer().none(), async (req, res) => {
 
     if (result.insertedId) {
       const token = jwt.sign(
-        { id: result.insertedId, email, userType: "GP", name },
+        { userId: result.insertedId, email, userType: "GP", name },
         JWT_SECRET,
         {
           expiresIn: "1h",
         }
       );
-      res.status(201).send({ message: "GP registered successfully", token });
+      res.status(201).send({ message: "GP registered successfully",userType: "GP", token,userId:result.insertedId });
     } else {
       throw new Error("Failed to insert GP data");
     }
@@ -199,7 +157,7 @@ app.post("/register/public", multer().none(), async (req, res) => {
 
     if (result.insertedId) {
       const token = jwt.sign(
-        { id: result.insertedId, email, userType: "Public", name },
+        { userId: result.insertedId, email, userType: "Public", name },
         JWT_SECRET,
         {
           expiresIn: "1h",
@@ -207,7 +165,7 @@ app.post("/register/public", multer().none(), async (req, res) => {
       );
       res
         .status(201)
-        .send({ message: "Public user registered successfully", token });
+        .send({ message: "Public user registered successfully", token,userType: "Public" ,userId: result.insertedId});
     } else {
       throw new Error("Failed to insert public user data");
     }
@@ -494,50 +452,56 @@ app.post("/api/bookAppointment", async (req, res) => {
   }
 });
 
-// Route to fetch public user appointments
-app.get("/api/getAppointments/:publicUserId", async (req, res) => {
-  const { publicUserId } = req.params;
+// Route to get upcoming appointments for a user (public or GP)
+app.get("/api/upcomingAppointments/:userId", async (req, res) => {
+  const { userId } = req.params;
 
   try {
     const publicUserCollection = database.collection("publicUsersCollection");
-    const publicUser = await publicUserCollection.findOne({
-      _id: new ObjectId(publicUserId),
-    });
+    const gpCollection = database.collection("gpCollection");
 
-    if (!publicUser) {
-      return res.status(404).send({ error: "Public user not found" });
+    // Check if the user is a public user
+    let user = await publicUserCollection.findOne({ _id: new ObjectId(userId) });
+
+    if (user) {
+      // If the user is a public user, return their upcoming appointments
+      const upcomingAppointments = user.appointments || [];
+      return res.send(upcomingAppointments);
     }
 
-    res.send(publicUser.appointments || []);
-  } catch (error) {
-    console.error("Error fetching appointments:", error);
-    res
-      .status(500)
-      .send({ error: "An error occurred while fetching appointments" });
-  }
-});
-
-// Route to get upcoming appointments for a public user
-app.get("/api/upcomingAppointments/:publicUserId", async (req, res) => {
-  const { publicUserId } = req.params;
-
-  try {
-    const user = await database
-      .collection("publicUsersCollection")
-      .findOne({ _id: new ObjectId(publicUserId) });
+    // If not a public user, check if the user is a GP
+    user = await gpCollection.findOne({ _id: new ObjectId(userId) });
 
     if (!user) {
       return res.status(404).send({ error: "User not found" });
     }
 
-    const upcomingAppointments = user.appointments || [];
+    // If the user is a GP, search for all public users' appointments associated with this GP
+    const publicUsers = await publicUserCollection
+      .find({ appointments: { $exists: true, $not: { $size: 0 } } })
+      .toArray();
 
-    res.send(upcomingAppointments);
+    // Filter appointments related to this GP
+    const gpAppointments = [];
+    publicUsers.forEach((publicUser) => {
+      publicUser.appointments.forEach((appointment) => {
+        if (appointment.gpId === userId) {
+          gpAppointments.push({
+            userName: publicUser.name,
+            appointmentDate: appointment.date,
+            appointmentTime: appointment.time,
+          });
+        }
+      });
+    });
+
+    res.send(gpAppointments);
   } catch (error) {
     console.error("Error fetching upcoming appointments:", error);
     res.status(500).send({ error: "An error occurred while fetching upcoming appointments." });
   }
 });
+
 
 // Route to cancel an appointment
 app.post("/api/cancelAppointment", async (req, res) => {

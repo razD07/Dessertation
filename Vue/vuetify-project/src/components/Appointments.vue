@@ -166,7 +166,7 @@ export default {
         this.initializeEvents();
       } catch (error) {
         console.error("Error setting availability:", error);
-        alert("Failed to save availability.");
+        // alert("Failed to save availability.");
       }
     },
     async fetchAvailability() {

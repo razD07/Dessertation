@@ -1,12 +1,11 @@
 <template>
   <div>
     <h1>{{ historyTitle }}</h1>
-    <!-- Add content for registered users here -->
   </div>
 </template>
 
 <script>
-import { getUserTypeFromToken } from "@/utils/auth"; // Adjust the path as needed
+import { getUserTypeFromToken } from "@/utils/auth";
 
 export default {
   name: "History",

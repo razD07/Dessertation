@@ -10,8 +10,8 @@ export default {
   name: "Register",
   data() {
     return {
-      tab: "tab-1", // Initialize the tab variable with a default value
-      showPassword: false, // State to toggle password visibility
+      tab: "tab-1",
+      showPassword: false,
       gpForm: {
         name: "",
         email: "",
@@ -19,7 +19,7 @@ export default {
         phoneNumber: "",
         address: "",
         password: "",
-        confirmPassword: "", // Added confirmPassword field
+        confirmPassword: "",
       },
       publicForm: {
         name: "",
@@ -28,7 +28,7 @@ export default {
         address: "",
         dob: "",
         password: "",
-        confirmPassword: "", // Added confirmPassword field
+        confirmPassword: "",
       },
       gpEmailError: "",
       publicEmailError: "",
@@ -142,7 +142,8 @@ export default {
 
         // Store the token in localStorage
         localStorage.setItem("token", response.data.token);
-
+        localStorage.setItem("userId", response.data.userId);
+        localStorage.setItem("userType", response.data.userType);
         this.$router.push({ name: "WelcomeGP" });
         alert("GP registered successfully!");
       } catch (error) {
@@ -178,6 +179,8 @@ export default {
 
         // Store the token in localStorage
         localStorage.setItem("token", response.data.token);
+        localStorage.setItem("userId", response.data.userId);
+        localStorage.setItem("userType", response.data.userType);
 
         this.$router.push({ name: "WelcomePublic" });
         alert("Public user registered successfully!");
@@ -406,27 +409,27 @@ export default {
 }
 
 .custom-tabs {
-  background-color: #f5f5f5; /* Light grey background color */
-  border-radius: 8px; /* Rounded corners */
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Slight shadow for depth */
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .custom-tab {
-  font-size: 14px; /* Smaller font size */
-  padding: 8px 12px; /* Reduced padding for a snug fit */
-  transition: background-color 0.3s ease; /* Smooth transition for hover effect */
-  display: flex; /* Use flexbox for better alignment */
-  align-items: center; /* Center align items */
+  font-size: 14px;
+  padding: 8px 12px;
+  transition: background-color 0.3s ease;
+  display: flex;
+  align-items: center;
 }
 
 .custom-tab:hover {
-  background-color: #e0e0e0; /* Slightly darker grey on hover */
+  background-color: #e0e0e0;
 }
 
 .form-container {
   position: relative;
   margin-top: 20px;
-  min-height: 400px; /* Ensure the container has a minimum height */
+  min-height: 400px;
 }
 
 .form-content {

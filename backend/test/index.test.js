@@ -6,8 +6,8 @@ describe('API Endpoints', () => {
     // Mock database behaviors before each test
     app.database.collection('users').findOne.mockResolvedValue({
       _id: 'someUserId',
-      name: 'John Doe',
-      email: 'john@example.com',
+      name: 'Raz D',
+      email: 'razD@example.com',
     });
 
     app.database.collection('users').insertOne.mockResolvedValue({

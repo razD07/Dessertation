@@ -11,8 +11,8 @@ describe("Settings.vue", () => {
       data() {
         return {
           user: {
-            name: "John Doe",
-            email: "johndoe@example.com",
+            name: "Raz D",
+            email: "RazD@example.com",
             phoneNumber: "123456789",
             address: "123 Main St",
             profilePhoto: "profile-photo-url",
@@ -36,8 +36,8 @@ describe("Settings.vue", () => {
   it("initializes with correct default data", () => {
     expect(wrapper.vm.editDialog).toBe(false);
     expect(wrapper.vm.isGP).toBe(true);
-    expect(wrapper.vm.user.name).toBe("John Doe");
-    expect(wrapper.vm.user.email).toBe("johndoe@example.com");
+    expect(wrapper.vm.user.name).toBe("Raz D");
+    expect(wrapper.vm.user.email).toBe("RazD@example.com");
   });
 
   it("opens and closes the edit dialog correctly", async () => {
@@ -53,8 +53,8 @@ describe("Settings.vue", () => {
   it("copies user data to editUser when opening the dialog", async () => {
     wrapper.vm.openEditDialog();
     await wrapper.vm.$nextTick();
-    expect(wrapper.vm.editUser.name).toBe("John Doe");
-    expect(wrapper.vm.editUser.email).toBe("johndoe@example.com");
+    expect(wrapper.vm.editUser.name).toBe("Raz D");
+    expect(wrapper.vm.editUser.email).toBe("RazD@example.com");
   });
 
   it("uploads a new profile photo", async () => {

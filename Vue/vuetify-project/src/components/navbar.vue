@@ -1,6 +1,6 @@
 <template>
   <v-app-bar color="primary" dark>
-    <v-toolbar-title>GP Finder</v-toolbar-title>
+    <v-toolbar-title>GP Connect</v-toolbar-title>
     <v-spacer></v-spacer>
     <v-toolbar-items>
       <v-btn text>{{ userName }}</v-btn>

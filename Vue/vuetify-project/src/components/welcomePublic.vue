@@ -134,7 +134,7 @@ export default {
 <style scoped>
 .v-container {
   height: 100vh;
-  background-color: #fff; /* Plain white background */
+  background-color: #fff;
 }
 .v-card {
   background-color: rgba(255, 255, 255, 0.9);

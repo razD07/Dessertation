@@ -146,7 +146,7 @@ export default {
       search: "",
       gps: [],
       registeredGP: null,
-      registeredGPId: null, // Add this to store registered GP's ID
+      registeredGPId: null,
       newReview: {
         rating: 0,
         review: "",
