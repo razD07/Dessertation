@@ -44,8 +44,8 @@ describe("Register.vue", () => {
   });
 
   it("validates GP form correctly", async () => {
-    wrapper.vm.gpForm.name = "Dr. Smith";
-    wrapper.vm.gpForm.email = "drsmith@example.com";
+    wrapper.vm.gpForm.name = "Dr. Raz";
+    wrapper.vm.gpForm.email = "drRaz@example.com";
     wrapper.vm.gpForm.clinicName = "Healthy Clinic";
     wrapper.vm.gpForm.phoneNumber = "123456789";
     wrapper.vm.gpForm.address = "123 Main St";
@@ -80,8 +80,8 @@ describe("Register.vue", () => {
   });
 
   it("validates Public form correctly", async () => {
-    wrapper.vm.publicForm.name = "John Doe";
-    wrapper.vm.publicForm.email = "johndoe@example.com";
+    wrapper.vm.publicForm.name = "raz D";
+    wrapper.vm.publicForm.email = "razdoe@example.com";
     wrapper.vm.publicForm.phoneNumber = "987654321";
     wrapper.vm.publicForm.address = "456 Elm St";
     wrapper.vm.publicForm.dob = "2000-01-01";

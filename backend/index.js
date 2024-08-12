@@ -56,48 +56,6 @@ app.get("/", (req, res) => {
   }
 });
 
-// Define routes after successful database connection
-// app.get("/Tester/GetTest", async (req, res) => {
-//   try {
-//     const result = await database
-//       .collection("testerCollection")
-//       .find({})
-//       .toArray();
-//     res.send(result);
-//   } catch (error) {
-//     console.error("Error fetching data:", error);
-//     res.status(500).send({ error: "An error occurred while fetching data." });
-//   }
-// });
-
-// app.post("/Tester/AddTest", multer().none(), async (req, res) => {
-//   try {
-//     const numOfDocs = await database
-//       .collection("testerCollection")
-//       .countDocuments({});
-//     await database.collection("testerCollection").insertOne({
-//       id: (numOfDocs + 1).toString(),
-//       description: req.body.newNotes,
-//     });
-//     res.json("Added Successfully");
-//   } catch (error) {
-//     console.error("Error adding note:", error);
-//     res.status(500).send({ error: "Cannot add data" });
-//   }
-// });
-
-// app.delete("/Tester/DeleteTest", async (req, res) => {
-//   try {
-//     await database.collection("testerCollection").deleteOne({
-//       id: req.query.id,
-//     });
-//     res.json("Deleted Successfully");
-//   } catch (error) {
-//     console.error("Error deleting data:", error);
-//     res.status(500).send({ error: "Cannot delete data" });
-//   }
-// });
-
 // New route to check if a user already exists
 app.get("/checkUserExists", async (req, res) => {
   const { email } = req.query;
@@ -493,29 +451,6 @@ app.post("/api/bookAppointment", async (req, res) => {
     res.status(500).send({ error: "An error occurred while booking the appointment" });
   }
 });
-
-// Route to fetch public user appointments
-// app.get("/api/getAppointments/:publicUserId", async (req, res) => {
-//   const { publicUserId } = req.params;
-
-//   try {
-//     const publicUserCollection = database.collection("publicUsersCollection");
-//     const publicUser = await publicUserCollection.findOne({
-//       _id: new ObjectId(publicUserId),
-//     });
-
-//     if (!publicUser) {
-//       return res.status(404).send({ error: "Public user not found" });
-//     }
-
-//     res.send(publicUser.appointments || []);
-//   } catch (error) {
-//     console.error("Error fetching appointments:", error);
-//     res
-//       .status(500)
-//       .send({ error: "An error occurred while fetching appointments" });
-//   }
-// });
 
 // Route to get upcoming appointments for a user (public or GP)
 app.get("/api/upcomingAppointments/:userId", async (req, res) => {
