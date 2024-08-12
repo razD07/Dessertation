@@ -8,7 +8,7 @@
         <v-card-title class="text-center">
           <div>
             <v-img class="mb-4" height="80" src="@/assets/doc_logo.png" />
-            <h1 class="text-h4 font-weight-bold">GP Finder</h1>
+            <h1 class="text-h4 font-weight-bold">GP Connect</h1>
             <div class="text-body-2 font-weight-bold mb-n1">Welcome Back</div>
           </div>
         </v-card-title>
@@ -119,8 +119,8 @@ export default {
         });
         const { token, userId, userType } = response.data;
         localStorage.setItem("token", token);
-        localStorage.setItem("userId", userId); // Store the user ID
-        localStorage.setItem("userType", userType); // Store the user type
+        localStorage.setItem("userId", userId);
+        localStorage.setItem("userType", userType);
         alert("Login successful!");
         if (userType === "GP") {
           this.$router.push({ name: "WelcomeGP" });

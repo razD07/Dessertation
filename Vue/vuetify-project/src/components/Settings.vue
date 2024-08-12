@@ -112,7 +112,7 @@ export default {
       }
     },
     openEditDialog() {
-      this.editUser = { ...this.user, password: "" }; // Copy user data to editUser
+      this.editUser = { ...this.user, password: "" };
       this.editDialog = true;
     },
     closeEditDialog() {

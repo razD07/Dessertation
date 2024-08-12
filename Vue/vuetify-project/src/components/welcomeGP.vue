@@ -45,7 +45,7 @@ export default {
   },
   created() {
     const token = localStorage.getItem("token");
-    this.userName = getUserNameFromToken(token) || "Guest"; // Fallback to 'Guest' if no name found
+    this.userName = getUserNameFromToken(token) || "Guest";
   },
   methods: {},
 };
@@ -54,7 +54,7 @@ export default {
 <style scoped>
 .v-container {
   height: 100vh;
-  background-color: #fff; /* Plain white background */
+  background-color: #fff;
 }
 .v-card {
   background-color: rgba(255, 255, 255, 0.9);

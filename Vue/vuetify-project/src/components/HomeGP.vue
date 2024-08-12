@@ -21,13 +21,12 @@
                 >
                   <v-list-item-content>
                     <v-list-item-title>
-                      <strong
-                        >{{ appointment.date }} at
-                        {{ appointment.time }}</strong
-                      >
+                      On
+                      <strong> {{ appointment.appointmentDate }}</strong> from
+                      <strong>{{ appointment.appointmentTime }}</strong>
                     </v-list-item-title>
                     <v-list-item-subtitle>
-                      <strong>With Dr. {{ appointment.gpName }}</strong>
+                      With <strong>{{ appointment.userName }}</strong>
                     </v-list-item-subtitle>
                   </v-list-item-content>
                 </v-list-item>
@@ -222,10 +221,10 @@ export default {
       }
     },
     goToAppointments() {
-      this.$router.push("/appointments");
+      this.$router.push("/welcome-gp/Appointments");
     },
     goToClinicDetails() {
-      this.$router.push("/clinic-details");
+      this.$router.push("/welcome-gp/settings");
     },
   },
 };
@@ -234,7 +233,7 @@ export default {
 <style scoped>
 .v-container {
   height: 100vh;
-  background-color: #fff; /* Plain white background */
+  background-color: #fff;
 }
 .v-card {
   background-color: rgba(255, 255, 255, 0.9);
