@@ -4,23 +4,23 @@ const cors = require("cors");
 const multer = require("multer");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const fs = require("fs");
+const path = require("path");
+const { google } = require('googleapis');
+const { uploadFile } = require("./googleDrive");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-const CONNECTION_STRING =
-  "mongodb+srv://admin:chiraz1996@cluster0.ktvrcpe.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
+const CONNECTION_STRING = "mongodb+srv://admin:chiraz1996@cluster0.ktvrcpe.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
 const DATABASENAME = "tester";
-const JWT_SECRET = "your_jwt_secret"; // Change this to a more secure secret
+const JWT_SECRET = "jwt_secret";
 let database;
 
 const connectToDatabase = async () => {
   try {
-    const client = await MongoClient.connect(CONNECTION_STRING, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
+    const client = await MongoClient.connect(CONNECTION_STRING);
     database = client.db(DATABASENAME);
     console.log("Connected to database successfully");
   } catch (error) {
@@ -34,6 +34,12 @@ connectToDatabase();
 app.listen(5038, () => {
   console.log("Server is running on port 5038");
 });
+
+// Ensure the uploads directory exists
+const uploadDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir);
+}
 
 // Central error handling middleware
 app.use((req, res, next) => {
@@ -51,46 +57,46 @@ app.get("/", (req, res) => {
 });
 
 // Define routes after successful database connection
-app.get("/Tester/GetTest", async (req, res) => {
-  try {
-    const result = await database
-      .collection("testerCollection")
-      .find({})
-      .toArray();
-    res.send(result);
-  } catch (error) {
-    console.error("Error fetching data:", error);
-    res.status(500).send({ error: "An error occurred while fetching data." });
-  }
-});
+// app.get("/Tester/GetTest", async (req, res) => {
+//   try {
+//     const result = await database
+//       .collection("testerCollection")
+//       .find({})
+//       .toArray();
+//     res.send(result);
+//   } catch (error) {
+//     console.error("Error fetching data:", error);
+//     res.status(500).send({ error: "An error occurred while fetching data." });
+//   }
+// });
 
-app.post("/Tester/AddTest", multer().none(), async (req, res) => {
-  try {
-    const numOfDocs = await database
-      .collection("testerCollection")
-      .countDocuments({});
-    await database.collection("testerCollection").insertOne({
-      id: (numOfDocs + 1).toString(),
-      description: req.body.newNotes,
-    });
-    res.json("Added Successfully");
-  } catch (error) {
-    console.error("Error adding note:", error);
-    res.status(500).send({ error: "Cannot add data" });
-  }
-});
+// app.post("/Tester/AddTest", multer().none(), async (req, res) => {
+//   try {
+//     const numOfDocs = await database
+//       .collection("testerCollection")
+//       .countDocuments({});
+//     await database.collection("testerCollection").insertOne({
+//       id: (numOfDocs + 1).toString(),
+//       description: req.body.newNotes,
+//     });
+//     res.json("Added Successfully");
+//   } catch (error) {
+//     console.error("Error adding note:", error);
+//     res.status(500).send({ error: "Cannot add data" });
+//   }
+// });
 
-app.delete("/Tester/DeleteTest", async (req, res) => {
-  try {
-    await database.collection("testerCollection").deleteOne({
-      id: req.query.id,
-    });
-    res.json("Deleted Successfully");
-  } catch (error) {
-    console.error("Error deleting data:", error);
-    res.status(500).send({ error: "Cannot delete data" });
-  }
-});
+// app.delete("/Tester/DeleteTest", async (req, res) => {
+//   try {
+//     await database.collection("testerCollection").deleteOne({
+//       id: req.query.id,
+//     });
+//     res.json("Deleted Successfully");
+//   } catch (error) {
+//     console.error("Error deleting data:", error);
+//     res.status(500).send({ error: "Cannot delete data" });
+//   }
+// });
 
 // New route to check if a user already exists
 app.get("/checkUserExists", async (req, res) => {
@@ -185,6 +191,7 @@ app.post("/register/public", multer().none(), async (req, res) => {
       dob,
       password: hashedPassword,
       registeredGP: null, // Initialize with no registered GP
+      appointments: [], // Initialize with no appointments
     };
     const result = await database
       .collection("publicUsersCollection")
@@ -313,3 +320,508 @@ app.get("/api/publicUsers/:gpId", async (req, res) => {
       .send({ error: "An error occurred while fetching public users." });
   }
 });
+
+// Route to fetch the registered GP for a specific public user
+app.get("/api/registeredGP/:publicUserId", async (req, res) => {
+  const { publicUserId } = req.params;
+
+  try {
+    const publicUser = await database
+      .collection("publicUsersCollection")
+      .findOne({ _id: new ObjectId(publicUserId) });
+
+    if (publicUser && publicUser.registeredGP) {
+      const gp = await database
+        .collection("gpCollection")
+        .findOne({ _id: new ObjectId(publicUser.registeredGP) });
+
+      res.send(gp);
+    } else {
+      res.status(404).send({ error: "No registered GP found for this user." });
+    }
+  } catch (error) {
+    console.error("Error fetching registered GP:", error);
+    res
+      .status(500)
+      .send({ error: "An error occurred while fetching registered GP." });
+  }
+});
+
+// Route to fetch the registered GP for a public user
+app.get("/api/registeredGP/:publicUserId", async (req, res) => {
+  const { publicUserId } = req.params;
+
+  try {
+    const publicUserCollection = database.collection("publicUsersCollection");
+    const publicUser = await publicUserCollection.findOne({
+      _id: new ObjectId(publicUserId),
+    });
+
+    if (!publicUser) {
+      return res.status(404).send({ error: "Public user not found" });
+    }
+
+    if (!publicUser.registeredGP) {
+      return res.status(404).send({ error: "No GP registered" });
+    }
+
+    const gpCollection = database.collection("gpCollection");
+    const registeredGP = await gpCollection.findOne({
+      _id: new ObjectId(publicUser.registeredGP),
+    });
+
+    res.send(registeredGP);
+  } catch (error) {
+    console.error("Error fetching registered GP:", error);
+    res
+      .status(500)
+      .send({ error: "An error occurred while fetching the registered GP" });
+  }
+});
+
+// Route to set GP availability
+app.post("/api/setAvailability", async (req, res) => {
+  const { gpId, availability } = req.body;
+
+  if (!gpId || !availability) {
+    return res.status(400).send({ error: "GP ID and availability are required" });
+  }
+
+  try {
+    const formattedAvailability = {};
+
+    // Ensure each day's availability is an array
+    for (const day in availability) {
+      if (availability[day] && typeof availability[day] === 'string') {
+        formattedAvailability[day] = availability[day].split(',').map(slot => slot.trim());
+      } else if (Array.isArray(availability[day])) {
+        formattedAvailability[day] = availability[day];
+      } else {
+        formattedAvailability[day] = [];
+      }
+    }
+
+    const gpCollection = database.collection("gpCollection");
+    await gpCollection.updateOne(
+      { _id: new ObjectId(gpId) },
+      { $set: { availability: formattedAvailability } }
+    );
+
+    res.send({ message: "Availability set successfully" });
+  } catch (error) {
+    console.error("Error setting availability:", error);
+    res.status(500).send({ error: "An error occurred while setting availability" });
+  }
+});
+
+// Route to fetch GP availability
+app.get("/api/getAvailability/:gpId", async (req, res) => {
+  const { gpId } = req.params;
+
+  try {
+    const gpCollection = database.collection("gpCollection");
+    const gp = await gpCollection.findOne({ _id: new ObjectId(gpId) });
+
+    if (!gp) {
+      return res.status(404).send({ error: "GP not found" });
+    }
+
+    res.send({ availability: gp.availability });
+  } catch (error) {
+    console.error("Error fetching availability:", error);
+    res
+      .status(500)
+      .send({ error: "An error occurred while fetching availability" });
+  }
+});
+
+// Route to book an appointment
+app.post("/api/bookAppointment", async (req, res) => {
+  const { publicUserId, date, time } = req.body;
+
+  if (!publicUserId || !date || !time) {
+    return res.status(400).send({ error: "All fields are required" });
+  }
+
+  try {
+    const publicUserCollection = database.collection("publicUsersCollection");
+    const gpCollection = database.collection("gpCollection");
+
+    const publicUser = await publicUserCollection.findOne({
+      _id: new ObjectId(publicUserId),
+    });
+
+    if (!publicUser) {
+      return res.status(404).send({ error: "Public user not found" });
+    }
+
+    if (publicUser.appointments && publicUser.appointments.length > 0) {
+      return res.status(400).send({ error: "User already has an appointment" });
+    }
+
+    const dayOfWeek = new Date(date).toLocaleString("en-US", { weekday: "long" });
+    const [start, end] = time.split(" - ");
+
+    const gp = await gpCollection.findOne({ _id: new ObjectId(publicUser.registeredGP) });
+
+    if (!gp) {
+      return res.status(404).send({ error: "GP not found" });
+    }
+
+    // Split the availability slot for the appointment
+    let newAvailability = [];
+    gp.availability[dayOfWeek].forEach((slot) => {
+      const splitSlots = splitSlot(slot, `${start}-${end}`);
+      newAvailability = newAvailability.concat(splitSlots);
+    });
+
+    newAvailability = newAvailability.filter((slot) => slot !== "-");
+
+    await gpCollection.updateOne(
+      { _id: new ObjectId(publicUser.registeredGP) },
+      { $set: { [`availability.${dayOfWeek}`]: newAvailability } }
+    );
+
+    await publicUserCollection.updateOne(
+      { _id: new ObjectId(publicUserId) },
+      { $push: { appointments: { date, time, gpId: publicUser.registeredGP } } }
+    );
+
+    res.send({ message: "Appointment booked successfully" });
+  } catch (error) {
+    console.error("Error booking appointment:", error);
+    res.status(500).send({ error: "An error occurred while booking the appointment" });
+  }
+});
+
+// Route to fetch public user appointments
+app.get("/api/getAppointments/:publicUserId", async (req, res) => {
+  const { publicUserId } = req.params;
+
+  try {
+    const publicUserCollection = database.collection("publicUsersCollection");
+    const publicUser = await publicUserCollection.findOne({
+      _id: new ObjectId(publicUserId),
+    });
+
+    if (!publicUser) {
+      return res.status(404).send({ error: "Public user not found" });
+    }
+
+    res.send(publicUser.appointments || []);
+  } catch (error) {
+    console.error("Error fetching appointments:", error);
+    res
+      .status(500)
+      .send({ error: "An error occurred while fetching appointments" });
+  }
+});
+
+// Route to get upcoming appointments for a public user
+app.get("/api/upcomingAppointments/:publicUserId", async (req, res) => {
+  const { publicUserId } = req.params;
+
+  try {
+    const user = await database
+      .collection("publicUsersCollection")
+      .findOne({ _id: new ObjectId(publicUserId) });
+
+    if (!user) {
+      return res.status(404).send({ error: "User not found" });
+    }
+
+    const upcomingAppointments = user.appointments || [];
+
+    res.send(upcomingAppointments);
+  } catch (error) {
+    console.error("Error fetching upcoming appointments:", error);
+    res.status(500).send({ error: "An error occurred while fetching upcoming appointments." });
+  }
+});
+
+// Route to cancel an appointment
+app.post("/api/cancelAppointment", async (req, res) => {
+  const { publicUserId } = req.body;
+
+  if (!publicUserId) {
+    return res.status(400).send({ error: "Public user ID is required" });
+  }
+
+  try {
+    const publicUserCollection = database.collection("publicUsersCollection");
+    const gpCollection = database.collection("gpCollection");
+
+    const publicUser = await publicUserCollection.findOne({
+      _id: new ObjectId(publicUserId),
+    });
+
+    if (!publicUser || !publicUser.appointments || publicUser.appointments.length === 0) {
+      return res.status(404).send({ error: "No appointment found to cancel" });
+    }
+
+    const appointment = publicUser.appointments[0]; // Assuming there's only one appointment
+    const { date, time, gpId } = appointment;
+
+    const dayOfWeek = new Date(date).toLocaleString("en-US", { weekday: "long" });
+    const [start, end] = time.split(" - ");
+
+    let availability = await gpCollection.findOne(
+      { _id: new ObjectId(gpId) },
+      { projection: { [`availability.${dayOfWeek}`]: 1 } }
+    );
+
+    // Push the canceled appointment time back into availability and merge slots
+    availability = mergeSlots(availability.availability[dayOfWeek], `${start}-${end}`);
+
+    await gpCollection.updateOne(
+      { _id: new ObjectId(gpId) },
+      { $set: { [`availability.${dayOfWeek}`]: availability } }
+    );
+
+    await publicUserCollection.updateOne(
+      { _id: new ObjectId(publicUserId) },
+      { $set: { appointments: [] } }
+    );
+
+    res.send({ message: "Appointment cancelled successfully" });
+  } catch (error) {
+    console.error("Error cancelling appointment:", error);
+    res.status(500).send({ error: "An error occurred while cancelling the appointment." });
+  }
+});
+
+// Fetch user details by ID
+app.get("/api/user/:userId", async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    const gpUser = await database.collection("gpCollection").findOne({ _id: new ObjectId(userId) });
+    const publicUser = await database.collection("publicUsersCollection").findOne({ _id: new ObjectId(userId) });
+
+    const user = gpUser || publicUser;
+    if (!user) {
+      return res.status(404).send({ error: "User not found" });
+    }
+
+    res.send(user);
+  } catch (error) {
+    console.error("Error fetching user details:", error);
+    res.status(500).send({ error: "An error occurred while fetching user details." });
+  }
+});
+
+// Update user details
+app.put("/api/user/:userId", async (req, res) => {
+  const { userId } = req.params;
+  const { password, _id, ...updatedDetails } = req.body; // Exclude _id from the update
+
+  try {
+    if (password) {
+      updatedDetails.password = await bcrypt.hash(password, 10);
+    }
+
+    const gpUser = await database.collection("gpCollection").findOne({ _id: new ObjectId(userId) });
+    const publicUser = await database.collection("publicUsersCollection").findOne({ _id: new ObjectId(userId) });
+
+    if (gpUser) {
+      await database.collection("gpCollection").updateOne(
+        { _id: new ObjectId(userId) },
+        { $set: updatedDetails }
+      );
+    } else if (publicUser) {
+      await database.collection("publicUsersCollection").updateOne(
+        { _id: new ObjectId(userId) },
+        { $set: updatedDetails }
+      );
+    } else {
+      return res.status(404).send({ error: "User not found" });
+    }
+
+    res.send({ message: "User details updated successfully" });
+  } catch (error) {
+    console.error("Error updating user details:", error);
+    res.status(500).send({ error: "An error occurred while updating user details." });
+  }
+});
+
+
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "tempUploads/");
+  },
+  filename: (req, file, cb) => {
+    cb(null, `${Date.now()}-${file.originalname}`);
+  },
+});
+const upload = multer({ storage });
+
+// Upload profile photo
+app.post("/api/user/uploadPhoto/:userId", upload.single("profilePhoto"), async (req, res) => {
+  const { userId } = req.params;
+
+  if (!req.file) {
+    return res.status(400).send({ error: "No file uploaded" });
+  }
+
+  try {
+    const response = await uploadFile(req.file.path, req.file.filename);
+    const profilePhotoUrl = response.url;
+
+    const gpUser = await database.collection("gpCollection").findOne({ _id: new ObjectId(userId) });
+    const publicUser = await database.collection("publicUsersCollection").findOne({ _id: new ObjectId(userId) });
+
+    if (gpUser) {
+      await database.collection("gpCollection").updateOne(
+        { _id: new ObjectId(userId) },
+        { $set: { profilePhoto: profilePhotoUrl } }
+      );
+    } else if (publicUser) {
+      await database.collection("publicUsersCollection").updateOne(
+        { _id: new ObjectId(userId) },
+        { $set: { profilePhoto: profilePhotoUrl } }
+      );
+    } else {
+      return res.status(404).send({ error: "User not found" });
+    }
+
+    // Delete the file from the server after uploading to Google Drive
+    fs.unlinkSync(req.file.path);
+
+    res.send({ message: "Profile photo uploaded successfully", profilePhotoUrl });
+  } catch (error) {
+    console.error("Error uploading profile photo:", error);
+    res.status(500).send({ error: "An error occurred while uploading profile photo." });
+  }
+});
+
+
+function splitSlot(slot, appointmentTime) {
+  const [slotStart, slotEnd] = slot.split("-");
+  const [appStart, appEnd] = appointmentTime.split("-");
+
+  if (slotStart <= appStart && slotEnd >= appEnd) {
+    return [`${slotStart}-${appStart}`, `${appEnd}-${slotEnd}`];
+  }
+
+  return [slot];
+}
+
+function mergeSlots(slots, canceledTime) {
+  slots.push(canceledTime);
+  slots.sort((a, b) => {
+    const [aStart] = a.split("-");
+    const [bStart] = b.split("-");
+    return new Date(`1970-01-01T${aStart}Z`) - new Date(`1970-01-01T${bStart}Z`);
+  });
+
+  const merged = [];
+  let current = slots[0];
+
+  for (let i = 1; i < slots.length; i++) {
+    const [currentStart, currentEnd] = current.split("-");
+    const [nextStart, nextEnd] = slots[i].split("-");
+
+    if (currentEnd === nextStart) {
+      current = `${currentStart}-${nextEnd}`;
+    } else {
+      merged.push(current);
+      current = slots[i];
+    }
+  }
+  merged.push(current);
+
+  return merged;
+}
+
+// Submit review and rating
+app.post("/api/review", async (req, res) => {
+  const { userId, gpId, rating, review } = req.body;
+
+  if (!userId || !gpId || rating == null || !review) {
+    return res.status(400).send({ error: "All fields are required" });
+  }
+
+  try {
+    const publicUserCollection = database.collection("publicUsersCollection");
+    const gpCollection = database.collection("gpCollection");
+
+    const publicUser = await publicUserCollection.findOne({ _id: new ObjectId(userId) });
+    const gp = await gpCollection.findOne({ _id: new ObjectId(gpId) });
+
+    if (!publicUser || !gp) {
+      return res.status(404).send({ error: "User or GP not found" });
+    }
+
+    if (publicUser.registeredGP !== gpId) {
+      return res.status(403).send({ error: "User is not registered with this GP" });
+    }
+
+    const reviewData = {
+      gpId,
+      rating,
+      review,
+      userName: publicUser.name,
+      userProfilePhoto: publicUser.profilePhoto,
+      date: new Date()
+    };
+
+    await publicUserCollection.updateOne(
+      { _id: new ObjectId(userId) },
+      { $push: { reviews: reviewData } }
+    );
+
+    res.send({ message: "Review submitted successfully" });
+  } catch (error) {
+    console.error("Error submitting review:", error);
+    res.status(500).send({ error: "An error occurred while submitting the review" });
+  }
+});
+
+// Fetch GP reviews and average rating
+app.get("/api/gp/reviews/:gpId", async (req, res) => {
+  const { gpId } = req.params;
+
+  try {
+    const publicUserCollection = database.collection("publicUsersCollection");
+    const reviews = await publicUserCollection
+      .aggregate([
+        { $match: { "reviews.gpId": gpId } },
+        { $unwind: "$reviews" },
+        { $match: { "reviews.gpId": gpId } },
+        {
+          $lookup: {
+            from: "publicUsersCollection",
+            localField: "_id",
+            foreignField: "_id",
+            as: "user"
+          }
+        },
+        { $unwind: "$user" },
+        {
+          $group: {
+            _id: null,
+            reviews: {
+              $push: {
+                rating: "$reviews.rating",
+                review: "$reviews.review",
+                userName: "$user.name",
+                userProfilePhoto: "$user.profilePhoto"
+              }
+            },
+            averageRating: { $avg: "$reviews.rating" }
+          }
+        }
+      ])
+      .toArray();
+
+    const result = reviews[0] || { reviews: [], averageRating: 0 };
+    res.send(result);
+  } catch (error) {
+    console.error("Error fetching reviews:", error);
+    res.status(500).send({ error: "An error occurred while fetching reviews" });
+  }
+});
+
+
+module.exports = app;

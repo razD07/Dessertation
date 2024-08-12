@@ -1,6 +1,5 @@
 <template>
   <div>
-    <navbar />
     <v-container class="fill-height d-flex align-center justify-center">
       <v-card class="elevation-12" style="max-width: 800px; width: 100%">
         <v-card-title class="text-left">
@@ -24,14 +23,11 @@
 </template>
 
 <script>
-import Navbar from "@/components/navbar.vue";
 import axios from "axios";
 
 export default {
   name: "RegisteredPublicUsers",
-  components: {
-    Navbar,
-  },
+  components: {},
   data() {
     return {
       publicUsers: [],

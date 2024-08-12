@@ -1,48 +1,33 @@
 <template>
   <div>
     <navbar />
-    <v-container class="fill-height d-flex align-center justify-center">
-      <v-card class="elevation-12" style="max-width: 800px; width: 100%">
-        <v-card-title class="text-left">
-          <h1>Welcome to Public Dashboard</h1>
-        </v-card-title>
-        <v-card-text>
-          <v-text-field
-            v-model="searchQuery"
-            label="Search GPs by name or address"
-            variant="outlined"
-            @input="filterGPs"
-          ></v-text-field>
-          <v-list>
-            <v-list-item
-              v-for="gp in filteredGPs"
-              :key="gp._id"
-              @click="selectGP(gp)"
-            >
-              <v-list-item-title>{{ gp.name }}</v-list-item-title>
-              <v-list-item-subtitle>{{ gp.clinicName }}</v-list-item-subtitle>
-              <v-list-item-subtitle>{{ gp.address }}</v-list-item-subtitle>
-            </v-list-item>
-          </v-list>
-        </v-card-text>
-      </v-card>
+    <v-container class="fill-height d-flex align-start">
+      <v-navigation-drawer app>
+        <v-list dense>
+          <v-list-item @click="$router.push({ name: 'HomePublic' })">
+            <v-list-item-title>Home</v-list-item-title>
+          </v-list-item>
+          <v-list-item @click="$router.push({ name: 'AppointmentsPublic' })">
+            <v-list-item-title>Appointments</v-list-item-title>
+          </v-list-item>
+          <v-list-item @click="$router.push({ name: 'GPs' })">
+            <v-list-item-title>GPs</v-list-item-title>
+          </v-list-item>
+          <v-list-item @click="$router.push({ name: 'HistoryPublic' })">
+            <v-list-item-title>History</v-list-item-title>
+          </v-list-item>
+          <v-list-item @click="$router.push({ name: 'UploadsPublic' })">
+            <v-list-item-title>Uploads</v-list-item-title>
+          </v-list-item>
+          <v-list-item @click="$router.push({ name: 'SettingsPublic' })">
+            <v-list-item-title>Settings</v-list-item-title>
+          </v-list-item>
+        </v-list>
+      </v-navigation-drawer>
+      <v-main>
+        <router-view></router-view>
+      </v-main>
     </v-container>
-
-    <v-dialog v-model="dialog" persistent max-width="600px">
-      <v-card>
-        <v-card-title class="headline"
-          >Register with {{ selectedGP?.name }}</v-card-title
-        >
-        <v-card-text>
-          <p>Are you sure you want to register with {{ selectedGP?.name }}?</p>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn color="primary" @click="registerWithGP">Yes</v-btn>
-          <v-btn @click="dialog = false">No</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
   </div>
 </template>
 
@@ -62,17 +47,20 @@ export default {
       filteredGPs: [],
       selectedGP: null,
       dialog: false,
+      alreadyRegisteredDialog: false,
+      registeredGP: null,
     };
   },
   created() {
     this.fetchGPs();
+    this.checkRegisteredGP();
   },
   methods: {
     async fetchGPs() {
       try {
         const response = await axios.get("http://localhost:5038/api/gps");
         this.gps = response.data;
-        this.filteredGPs = this.gps;
+        this.filterGPs();
       } catch (error) {
         console.error("Error fetching GPs:", error);
       }
@@ -85,10 +73,20 @@ export default {
           gp.clinicName.toLowerCase().includes(query) ||
           gp.address.toLowerCase().includes(query)
       );
+      // Remove the registered GP from the list
+      if (this.registeredGP) {
+        this.filteredGPs = this.filteredGPs.filter(
+          (gp) => gp._id !== this.registeredGP._id
+        );
+      }
     },
     selectGP(gp) {
-      this.selectedGP = gp;
-      this.dialog = true;
+      if (this.registeredGP && this.registeredGP._id === gp._id) {
+        this.alreadyRegisteredDialog = true;
+      } else {
+        this.selectedGP = gp;
+        this.dialog = true;
+      }
     },
     async registerWithGP() {
       try {
@@ -103,9 +101,30 @@ export default {
         });
         alert("Successfully registered with GP!");
         this.dialog = false;
+        this.checkRegisteredGP(); // Refresh the registered GP information
       } catch (error) {
         console.error("Error registering with GP:", error);
         alert("Failed to register with GP.");
+      }
+    },
+    async checkRegisteredGP() {
+      try {
+        const publicUserId = localStorage.getItem("userId"); // Assuming you store the logged-in public user's ID in localStorage
+        if (!publicUserId) {
+          alert("User ID not found. Please log in again.");
+          return;
+        }
+        const response = await axios.get(
+          `http://localhost:5038/api/registeredGP/${publicUserId}`
+        );
+        this.registeredGP = response.data;
+        this.filterGPs(); // Update the filtered GP list
+      } catch (error) {
+        if (error.response && error.response.status === 404) {
+          this.registeredGP = null; // No registered GP found
+        } else {
+          console.error("Error checking registered GP:", error);
+        }
       }
     },
   },
